@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>노사협의체 의견 청취함 · 더현대광주 신축공사</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
+  :root{
+    --bg:#FFF7F1; --ink:#201712; --ink-soft:#5B4C43; --line:#EADACC;
+    --card:#fff;
+    --accent:#6C4AB6; --accent-deep:#4E3585;
+    --navh:64px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom));
+  }
+  .wrap{ max-width:720px; margin:0 auto; padding:0 16px 30px; }
+
+  .back-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:14px; padding:7px 13px; border-radius:99px;
+    background:#F3ECE4; color:var(--ink);
+    font-size:12.5px; font-weight:700; text-decoration:none;
+  }
+  h1{ font-size:20px; font-weight:800; margin:12px 0 2px; }
+  .page-sub{ font-size:12px; color:var(--ink-soft); margin:0 0 4px; line-height:1.6; }
+  .page-note{
+    background:#F3EEFA; border:1px solid #DDD0F0;
+    border-radius:10px; padding:10px 12px; margin:14px 0 18px;
+    font-size:11.5px; color:var(--accent-deep); line-height:1.6;
+  }
+
+  h2{ font-size:15px; font-weight:800; margin:20px 0 8px; }
+  h2:first-of-type{ margin-top:4px; }
+  .msec{ font-size:12.5px; font-weight:800; color:var(--ink-soft); margin:18px 0 8px; }
+
+  /* 폼 */
+  .form-card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:16px;
+  }
+  .field{ margin-bottom:14px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{
+    display:block; font-size:12.5px; font-weight:700;
+    color:var(--ink-soft); margin-bottom:6px;
+  }
+  .field label .i18n{ display:block; font-weight:500; font-size:10.5px; opacity:.8; margin-top:1px; }
+  .field input[type=text], .field textarea, .field select{
+    width:100%; border:1px solid var(--line); border-radius:10px;
+    padding:11px 12px; font-family:inherit; font-size:14.5px;
+    background:#FFFDFB; color:var(--ink);
+  }
+  .field textarea{ resize:vertical; min-height:110px; }
+  .field.off{ opacity:.4; pointer-events:none; }
+
+  .anon-box{
+    display:flex; align-items:center; gap:10px;
+    background:#F3EEFA; border:1.5px solid #DDD0F0;
+    border-radius:12px; padding:13px 14px; cursor:pointer;
+    margin-bottom:14px;
+  }
+  .anon-box.on{ background:var(--accent); border-color:var(--accent-deep); }
+  .anon-box .bx{
+    width:22px; height:22px; border-radius:6px;
+    border:2px solid #B9A4DC; background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--accent); font-weight:900; flex:0 0 auto;
+  }
+  .anon-box.on .bx{ background:#fff; border-color:#fff; }
+  .anon-box .lb{ font-size:13.5px; font-weight:800; }
+  .anon-box .lb .i18n{ display:block; font-weight:500; font-size:10.5px; opacity:.85; margin-top:1px; }
+  .anon-box.on .lb{ color:#fff; }
+
+  .btn{
+    border:none; border-radius:10px; padding:10px 14px;
+    font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;
+  }
+  .btn-ghost{ background:#F3ECE4; color:var(--ink); }
+  .btn-main{ background:var(--accent); color:#fff; }
+  .btn-danger{ background:#FBE9EA; color:#A3151F; }
+
+  /* 사진 첨부 */
+  .photo-add{
+    display:block; width:100%; text-align:center;
+    border:1.5px dashed var(--line); border-radius:12px;
+    padding:16px; background:#FFFDFB; cursor:pointer;
+    font-size:13px; font-weight:700; color:var(--ink-soft);
+    font-family:inherit;
+  }
+  .thumbs{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .thumb{ position:relative; width:78px; height:78px; }
+  .thumb img{
+    width:100%; height:100%; object-fit:cover;
+    border-radius:10px; border:1px solid var(--line);
+  }
+  .thumb button{
+    position:absolute; top:-7px; right:-7px;
+    width:22px; height:22px; border-radius:50%;
+    background:#111; color:#fff; border:2px solid #fff;
+    font-size:12px; cursor:pointer; font-family:inherit; padding:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* 목록 */
+  .post{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:14px 16px; margin-bottom:10px;
+    border-left:5px solid var(--accent);
+  }
+  .post .ptop{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .post .pno{ font-size:11px; color:var(--ink-soft); font-weight:700; }
+  .post .pwho{ font-size:14.5px; font-weight:800; margin-top:2px; }
+  .post .pmeta{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
+  .post .pbody{
+    font-size:13.5px; margin-top:10px; line-height:1.7;
+    white-space:pre-wrap; color:var(--ink);
+  }
+  .post .plock{
+    font-size:12px; color:var(--ink-soft); margin-top:8px;
+    background:#F7F1EA; border-radius:8px; padding:8px 10px;
+  }
+  .post .pdel{
+    background:none; border:none; color:#A3151F;
+    font-size:11.5px; font-weight:700; cursor:pointer;
+    font-family:inherit; padding:2px; flex:0 0 auto;
+  }
+  .post .pph{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .post .pph img{
+    width:84px; height:84px; object-fit:cover;
+    border-radius:10px; border:1px solid var(--line); cursor:pointer;
+  }
+  .chip-tag{
+    display:inline-block; font-size:10.5px; font-weight:800;
+    border-radius:5px; padding:2px 7px; background:#F3EEFA; color:var(--accent-deep);
+  }
+  .chip-tag.anon{ background:#E9E6EF; color:#5B5470; }
+
+  .empty{
+    text-align:center; padding:28px 16px;
+    color:var(--ink-soft); font-size:13.5px;
+    background:var(--card); border:1px dashed var(--line); border-radius:14px;
+  }
+  .stats{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+  .stat{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:12px 10px; text-align:center;
+  }
+  .stat .n{ font-size:20px; font-weight:800; }
+  .stat .l{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+
+  /* 잠금 */
+  .lock-card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:26px 20px; text-align:center;
+  }
+  .lock-card .ico{ font-size:34px; }
+  .lock-card h3{ font-size:16px; font-weight:800; margin:12px 0 6px; }
+  .lock-card p{ font-size:12.5px; color:var(--ink-soft); margin:0 0 16px; line-height:1.6; }
+  .lock-card input{
+    width:100%; max-width:260px; text-align:center;
+    border:1px solid var(--line); border-radius:10px;
+    padding:12px; font-family:inherit; font-size:15px;
+    background:#FFFDFB; color:var(--ink); margin-bottom:10px;
+  }
+  .lock-card .err{ font-size:12.5px; color:#A3151F; font-weight:700; margin-bottom:10px; display:none; }
+  .lock-card .err.on{ display:block; }
+
+  .admin-card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:16px; margin-bottom:12px;
+  }
+  .admin-card h3{ font-size:14px; font-weight:800; margin:0 0 6px; }
+  .admin-card p{ font-size:12.5px; color:var(--ink-soft); margin:0 0 12px; line-height:1.6; }
+
+  .sync-note{
+    font-size:11.5px; padding:8px 12px; border-radius:10px;
+    margin-bottom:14px; line-height:1.5;
+  }
+  .sync-note.local{ background:#FFF0E6; border:1px solid #FFD9BD; color:#B8380A; }
+  .sync-note.live{ background:#E8F6EE; border:1px solid #B8E3CA; color:#146640; }
+
+  /* 사진 확대 */
+  .lightbox{
+    display:none; position:fixed; inset:0; z-index:70;
+    background:rgba(10,6,4,.9);
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .lightbox.open{ display:flex; }
+  .lightbox img{ max-width:100%; max-height:88vh; border-radius:10px; }
+
+  /* 탭 */
+  .tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background:rgba(255,255,255,.96); backdrop-filter:blur(8px);
+    border-top:1px solid var(--line); display:flex;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tabbar button{
+    flex:1; border:none; background:none; cursor:pointer;
+    font-family:inherit; padding:9px 4px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--ink-soft); font-size:11px; font-weight:700;
+  }
+  .tabbar button .ic{ font-size:19px; line-height:1; }
+  .tabbar button.on{ color:var(--accent); }
+
+  .view{ display:none; }
+  .view.on{ display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back-btn" href="index.html">← 메인으로</a>
+
+  <h1>노사협의체 의견 청취함</h1>
+  <p class="page-sub">劳资协议会 意见征集箱<br>Hòm thư góp ý Hội đồng lao động</p>
+
+  <div class="sync-note local" id="syncNote">
+    이 기기에만 저장되는 중입니다.
+  </div>
+
+  <!-- ===== 대시보드 ===== -->
+  <div class="view on" id="view-dash">
+
+    <div class="page-note">
+      현장 안전·근무환경에 대한 의견을 자유롭게 남겨주세요. 작성된 내용은 관리자만 확인하며, 익명으로도 제출할 수 있습니다.<br>
+      请自由留下您对现场安全和工作环境的意见。内容仅管理员可见，也可匿名提交。<br>
+      Vui lòng để lại ý kiến về an toàn và môi trường làm việc. Chỉ quản trị viên xem được, có thể gửi ẩn danh.
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="n" id="stTotal">0</div><div class="l">접수된 의견</div></div>
+      <div class="stat"><div class="n" id="stAnon">0</div><div class="l">익명 접수</div></div>
+    </div>
+
+    <h2>의견 작성하기 / 提交意见 / Gửi ý kiến</h2>
+    <div class="form-card">
+
+      <div class="anon-box" id="anonBox" onclick="toggleAnon()">
+        <div class="bx" id="anonBx"></div>
+        <div class="lb">익명으로 제출하기
+          <span class="i18n">匿名提交 · Gửi ẩn danh</span>
+        </div>
+      </div>
+
+      <div id="idFields">
+        <div class="field">
+          <label>성명 *<span class="i18n">姓名 · Họ tên</span></label>
+          <input type="text" id="fName" placeholder="예: 홍길동">
+        </div>
+        <div class="field">
+          <label>휴대폰 번호 *<span class="i18n">手机号码 · Số điện thoại</span></label>
+          <input type="text" id="fPhone" inputmode="tel" placeholder="010-0000-0000">
+        </div>
+        <div class="field">
+          <label>협력업체 *<span class="i18n">合作公司 · Công ty</span></label>
+          <select id="fCompany"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>내용 *<span class="i18n">内容 · Nội dung</span></label>
+        <textarea id="fBody" placeholder="의견을 자유롭게 작성해 주세요."></textarea>
+      </div>
+
+      <div class="field">
+        <label>사진 첨부 (최대 3장)<span class="i18n">附加照片 · Ảnh kèm theo</span></label>
+        <button type="button" class="photo-add" onclick="document.getElementById('fPhoto').click()">
+          📷 사진 선택 / 添加照片 / Chọn ảnh
+        </button>
+        <input type="file" id="fPhoto" accept="image/*" multiple style="display:none"
+               onchange="onPhotoPick(event)">
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+      <div class="field">
+        <button type="button" class="btn btn-main" id="submitBtn" onclick="submitPost()"
+                style="width:100%; padding:14px; font-size:14.5px">
+          제출하기 / 提交 / Gửi
+        </button>
+      </div>
+    </div>
+
+    <h2>접수 현황</h2>
+    <p class="page-sub" style="margin-bottom:10px">
+      접수된 항목만 표시됩니다. 내용은 관리자만 확인할 수 있습니다.
+    </p>
+    <div id="pubList"></div>
+  </div>
+
+  <!-- ===== 관리 ===== -->
+  <div class="view" id="view-admin">
+
+    <div id="adminLock">
+      <div class="lock-card">
+        <div class="ico">🔒</div>
+        <h3>관리자 인증</h3>
+        <p>의견 내용은 비밀번호 입력 후<br>확인할 수 있습니다.</p>
+        <input type="password" id="pwInput" placeholder="비밀번호"
+               onkeydown="if(event.key==='Enter') tryUnlock()">
+        <div class="err" id="pwErr">비밀번호가 올바르지 않습니다.</div>
+        <button type="button" class="btn btn-main" onclick="tryUnlock()">확인</button>
+      </div>
+    </div>
+
+    <div id="adminBody" style="display:none">
+      <div class="admin-card">
+        <h3>📡 실시간 연동 상태</h3>
+        <p id="adminSync">확인 중...</p>
+      </div>
+
+      <h2>접수된 의견 <span id="admCount" style="color:var(--ink-soft); font-weight:600"></span></h2>
+      <div id="admList"></div>
+
+      <div class="admin-card" style="margin-top:16px">
+        <h3>📤 텍스트로 내보내기</h3>
+        <p>접수된 의견 전체를 복사해 보고용으로 붙여넣을 수 있습니다. (사진은 제외)</p>
+        <button type="button" class="btn btn-ghost" onclick="exportPosts()">전체 의견 복사하기</button>
+      </div>
+
+      <div class="admin-card">
+        <h3>🔒 관리 화면 잠그기</h3>
+        <p>다시 잠그면 비밀번호를 입력해야 내용을 볼 수 있습니다.</p>
+        <button type="button" class="btn btn-ghost" onclick="lockAdmin()">관리 화면 잠그기</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lbImg" src="" alt="">
+</div>
+
+<nav class="tabbar">
+  <button type="button" class="on" data-v="dash" onclick="go('dash')"><span class="ic">📮</span>대시보드</button>
+  <button type="button" data-v="admin" onclick="go('admin')"><span class="ic">⚙️</span>관리</button>
+</nav>
+
+<script>
+/* ===== Firebase (DABs와 동일 프로젝트) ===== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCdXaaHiwnEOKOIvrmWvSErdWnPgJ19e8c",
+  authDomain: "j978-54440.firebaseapp.com",
+  databaseURL: "https://j978-54440-default-rtdb.firebaseio.com",
+  projectId: "j978-54440",
+  storageBucket: "j978-54440.firebasestorage.app",
+  messagingSenderId: "981675387856",
+  appId: "1:981675387856:web:f4967e3b8c0c11f59d27d5"
+};
+
+const COMPANIES = ["현대건설","신영토건","영신디엔씨","약동산업","대주중공업","에스엠파워텍"];
+const ADMIN_PW = "rkdalstn";
+
+let posts = {};          // { key: {...} }
+let postsRef = null;
+let anon = false;
+let photos = [];         // data URL 배열
+let adminUnlocked = false;
+
+/* ---------- 탭 ---------- */
+function go(v){
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('on'));
+  document.getElementById('view-' + v).classList.add('on');
+  document.querySelectorAll('.tabbar button').forEach(b =>
+    b.classList.toggle('on', b.dataset.v === v));
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* ---------- 익명 ---------- */
+function toggleAnon(){
+  anon = !anon;
+  document.getElementById('anonBox').classList.toggle('on', anon);
+  document.getElementById('anonBx').textContent = anon ? '✓' : '';
+  document.getElementById('idFields').style.display = anon ? 'none' : 'block';
+}
+
+/* ---------- 사진 ---------- */
+function onPhotoPick(e){
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  files.forEach(f => {
+    if (photos.length >= 3){ return; }
+    shrinkImage(f, url => { photos.push(url); drawThumbs(); });
+  });
+  if (files.length && photos.length >= 3) {
+    setTimeout(() => {
+      if (photos.length >= 3) alert('사진은 최대 3장까지 첨부할 수 있습니다.');
+    }, 400);
+  }
+}
+function shrinkImage(file, cb){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX){
+        if (w > h){ h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(cv.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => alert('사진을 읽을 수 없습니다.');
+    img.src = reader.result;
+  };
+  reader.onerror = () => alert('사진을 읽을 수 없습니다.');
+  reader.readAsDataURL(file);
+}
+function drawThumbs(){
+  document.getElementById('thumbs').innerHTML = photos.map((p,i) =>
+    '<div class="thumb"><img src="'+p+'" alt="">' +
+    '<button type="button" onclick="rmPhoto('+i+')">×</button></div>').join('');
+}
+function rmPhoto(i){ photos.splice(i,1); drawThumbs(); }
+
+/* ---------- 저장소 ---------- */
+function loadLocal(){
+  try { posts = JSON.parse(localStorage.getItem('board_posts') || '{}'); }
+  catch(e){ posts = {}; }
+}
+function saveLocal(){
+  try { localStorage.setItem('board_posts', JSON.stringify(posts)); } catch(e){}
+}
+
+/* ---------- 제출 ---------- */
+function submitPost(){
+  const body = document.getElementById('fBody').value.trim();
+  if (!body){ alert('내용을 입력해 주세요.'); return; }
+
+  let name = '', phone = '', company = '';
+  if (!anon){
+    name = document.getElementById('fName').value.trim();
+    phone = document.getElementById('fPhone').value.trim();
+    company = document.getElementById('fCompany').value;
+    if (!name){ alert('성명을 입력해 주세요. 익명으로 제출하시려면 익명 체크박스를 선택해 주세요.'); return; }
+    if (!phone){ alert('휴대폰 번호를 입력해 주세요.'); return; }
+  }
+
+  const data = {
+    anon: anon,
+    name: name,
+    phone: phone,
+    company: company,
+    body: body,
+    photos: photos.slice(),
+    at: new Date().toISOString()
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '제출 중...';
+
+  const done = () => {
+    btn.disabled = false;
+    btn.textContent = '제출하기 / 提交 / Gửi';
+    document.getElementById('fBody').value = '';
+    document.getElementById('fName').value = '';
+    document.getElementById('fPhone').value = '';
+    photos = []; drawThumbs();
+    if (anon) toggleAnon();
+    alert('의견이 접수되었습니다. 감사합니다.\n意见已提交，谢谢。\nÝ kiến đã được gửi. Xin cảm ơn.');
+    render();
+  };
+
+  if (postsRef){
+    postsRef.push(data).then(done).catch(() => {
+      btn.disabled = false;
+      btn.textContent = '제출하기 / 提交 / Gửi';
+      alert('제출에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    });
+  } else {
+    posts['local-' + Date.now()] = data;
+    saveLocal();
+    done();
+  }
+}
+
+function delPost(key){
+  if (!confirm('이 의견을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  if (postsRef){
+    postsRef.child(key).remove().catch(() => alert('삭제에 실패했습니다.'));
+  } else {
+    delete posts[key];
+    saveLocal();
+    render();
+  }
+}
+
+/* ---------- 표시 ---------- */
+function sortedPosts(){
+  return Object.keys(posts)
+    .map(k => ({ key:k, p:posts[k] }))
+    .sort((a,b) => String(b.p.at||'').localeCompare(String(a.p.at||'')));
+}
+function fmtDate(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
+         ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function esc(s){
+  return String(s||'').replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function render(){
+  const list = sortedPosts();
+  const total = list.length;
+  const anonN = list.filter(x => x.p.anon).length;
+  document.getElementById('stTotal').textContent = total;
+  document.getElementById('stAnon').textContent = anonN;
+
+  // 대시보드 — 항목만
+  const pub = document.getElementById('pubList');
+  pub.innerHTML = total
+    ? list.map((x,i) => {
+        const p = x.p;
+        const who = p.anon
+          ? '<span class="chip-tag anon">익명</span>'
+          : '<span class="chip-tag">'+esc(p.company || '업체 미기재')+'</span>';
+        const nph = (p.photos || []).length;
+        return '<div class="post">' +
+          '<div class="pno">접수번호 ' + String(total - i).padStart(3,'0') + '</div>' +
+          '<div class="pmeta" style="margin-top:6px">' + who +
+            '<span style="margin-left:8px">' + fmtDate(p.at) + '</span></div>' +
+          '<div class="plock">🔒 내용은 관리자만 확인할 수 있습니다' +
+            (nph ? ' · 사진 ' + nph + '장 첨부' : '') + '</div>' +
+        '</div>';
+      }).join('')
+    : '<div class="empty">아직 접수된 의견이 없습니다.</div>';
+
+  // 관리 — 전체 내용
+  document.getElementById('admCount').textContent = total ? '(' + total + '건)' : '';
+  const adm = document.getElementById('admList');
+  adm.innerHTML = total
+    ? list.map((x,i) => {
+        const p = x.p;
+        const head = p.anon ? '익명 제출'
+          : esc(p.name) + (p.company ? ' · ' + esc(p.company) : '');
+        const contact = (!p.anon && p.phone)
+          ? '<a href="tel:'+esc(p.phone).replace(/[^0-9+]/g,'')+'" style="color:var(--accent); font-weight:700; text-decoration:none">'+esc(p.phone)+'</a>'
+          : '';
+        const ph = (p.photos || []).map((src,j) =>
+          '<img src="'+src+'" alt="첨부사진" onclick="showImg(\''+x.key+'\','+j+')">').join('');
+        return '<div class="post">' +
+          '<div class="ptop"><div>' +
+            '<div class="pno">접수번호 ' + String(total - i).padStart(3,'0') + ' · ' + fmtDate(p.at) + '</div>' +
+            '<div class="pwho">' + head + '</div>' +
+            (contact ? '<div class="pmeta">' + contact + '</div>' : '') +
+          '</div>' +
+          '<button class="pdel" onclick="delPost(\''+x.key+'\')">삭제</button></div>' +
+          '<div class="pbody">' + esc(p.body) + '</div>' +
+          (ph ? '<div class="pph">' + ph + '</div>' : '') +
+        '</div>';
+      }).join('')
+    : '<div class="empty">아직 접수된 의견이 없습니다.</div>';
+}
+
+function showImg(key, idx){
+  const p = posts[key];
+  if (!p || !p.photos || !p.photos[idx]) return;
+  document.getElementById('lbImg').src = p.photos[idx];
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function exportPosts(){
+  const list = sortedPosts();
+  if (!list.length){ alert('접수된 의견이 없습니다.'); return; }
+  let txt = '[노사협의체 의견 청취함]\n더현대광주 신축공사\n총 ' + list.length + '건\n\n';
+  list.forEach((x,i) => {
+    const p = x.p;
+    txt += (list.length - i) + '. ' + fmtDate(p.at) + '\n';
+    txt += '   ' + (p.anon ? '익명 제출' :
+      (p.name + (p.company ? ' / ' + p.company : '') + (p.phone ? ' / ' + p.phone : ''))) + '\n';
+    txt += '   ' + p.body.replace(/\n/g, '\n   ') + '\n';
+    if ((p.photos || []).length) txt += '   (사진 ' + p.photos.length + '장 첨부)\n';
+    txt += '\n';
+  });
+  if (navigator.clipboard){
+    navigator.clipboard.writeText(txt)
+      .then(() => alert('복사했습니다.'))
+      .catch(() => prompt('아래 내용을 복사하세요', txt));
+  } else {
+    prompt('아래 내용을 복사하세요', txt);
+  }
+}
+
+/* ---------- 잠금 ---------- */
+function tryUnlock(){
+  const v = document.getElementById('pwInput').value.trim();
+  if (v === ADMIN_PW){
+    adminUnlocked = true;
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwErr').classList.remove('on');
+    document.getElementById('adminLock').style.display = 'none';
+    document.getElementById('adminBody').style.display = 'block';
+  } else {
+    document.getElementById('pwErr').classList.add('on');
+  }
+}
+function lockAdmin(){
+  adminUnlocked = false;
+  document.getElementById('adminLock').style.display = 'block';
+  document.getElementById('adminBody').style.display = 'none';
+}
+
+/* ---------- 초기화 ---------- */
+function buildCompanySelect(){
+  document.getElementById('fCompany').innerHTML =
+    COMPANIES.map(c => '<option value="'+c+'">'+c+'</option>').join('') +
+    '<option value="기타">기타</option>';
+}
+function setSyncLocal(){
+  document.getElementById('adminSync').textContent =
+    '연결되지 않았습니다. 제출된 내용이 이 기기에만 저장됩니다.';
+}
+function initFirebase(){
+  const s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
+    s2.onload = () => {
+      try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        postsRef = firebase.database().ref('board_posts');
+        postsRef.on('value', snap => { posts = snap.val() || {}; render(); });
+        const n = document.getElementById('syncNote');
+        n.className = 'sync-note live';
+        n.textContent = '실시간 연동 중입니다. 제출된 의견이 바로 접수됩니다.';
+        document.getElementById('adminSync').textContent =
+          '정상 연결되었습니다. 모든 기기에서 접수 내용이 동일하게 보입니다.';
+      } catch(e){ loadLocal(); setSyncLocal(); render(); }
+    };
+    s2.onerror = () => { loadLocal(); setSyncLocal(); render(); };
+    document.head.appendChild(s2);
+  };
+  s1.onerror = () => { loadLocal(); setSyncLocal(); render(); };
+  document.head.appendChild(s1);
+}
+
+buildCompanySelect();
+drawThumbs();
+initFirebase();
+</script>
+</body>
+</html>

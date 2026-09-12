@@ -98,6 +98,59 @@
   }
   .zone.draft{ border-style:dashed; }
 
+  /* 장비 마커 */
+  .eqmark{
+    position:absolute; transform:translate(-50%,-100%);
+    display:flex; align-items:center; gap:3px;
+    background:rgba(17,17,17,.88); color:#fff;
+    border:1.5px solid #fff; border-radius:99px;
+    padding:3px 7px 3px 5px; white-space:nowrap;
+    font-size:10px; font-weight:800; line-height:1.1;
+    box-shadow:0 1px 4px rgba(0,0,0,.4);
+  }
+  .eqmark .em{ font-size:12px; }
+  .eqmark::after{
+    content:''; position:absolute; left:50%; bottom:-6px;
+    width:0; height:0; margin-left:-4px;
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:6px solid rgba(17,17,17,.88);
+  }
+  .eqmark .mdel{
+    position:absolute; top:-8px; right:-8px;
+    width:18px; height:18px; border-radius:50%;
+    background:#C21F2A; color:#fff; border:2px solid #fff;
+    font-size:10px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-family:inherit; padding:0;
+  }
+  #viewMap .eqmark, .modal-sheet .eqmark{ pointer-events:none; }
+
+  /* 모드 전환 */
+  .mode-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .mode-row button{
+    flex:1; border:2px solid var(--line); background:#fff;
+    border-radius:10px; padding:11px 8px; cursor:pointer;
+    font-family:inherit; font-size:13px; font-weight:800; color:#9C8E84;
+    transition:all .12s ease;
+  }
+  .mode-row button.on{
+    background:var(--accent); border-color:var(--accent-deep);
+    color:#fff; box-shadow:0 2px 8px rgba(20,79,52,.28);
+  }
+  .eq-pick{
+    background:#FFFDFB; border:1px solid var(--line);
+    border-radius:12px; padding:12px; margin-bottom:10px;
+  }
+  .eq-pick .ttl{ font-size:11.5px; font-weight:700; color:var(--ink-soft); margin-bottom:8px; }
+  .eq-pick .none{ font-size:12px; color:var(--ink-soft); }
+  .eq-arm{
+    border:1.5px solid var(--line); background:#fff;
+    border-radius:99px; padding:7px 12px; margin:0 6px 6px 0;
+    font-family:inherit; font-size:12.5px; font-weight:700;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .eq-arm.on{ background:#111; border-color:#111; color:#fff; }
+
   .map-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
   .map-tools .count{ font-size:12.5px; color:var(--ink-soft); flex:1; }
   .btn{
@@ -501,7 +554,18 @@
     </div>
 
     <h2>작업구간 지정</h2>
-    <p class="hint">배치도 위를 손가락(또는 마우스)으로 드래그하면 구간이 그려져요. 여러 개 추가할 수 있고, 각 구간 오른쪽 위 ×로 지울 수 있어요.</p>
+    <p class="hint">구간을 그리거나, 선택한 장비를 배치도에 찍을 수 있어요.</p>
+
+    <div class="mode-row">
+      <button type="button" class="on" id="modeZone" onclick="setMode('zone')">✏️ 구간 그리기</button>
+      <button type="button" id="modeEq" onclick="setMode('eq')">🚜 장비 배치</button>
+    </div>
+
+    <div class="eq-pick" id="eqPick" style="display:none">
+      <div class="ttl">배치할 장비를 고른 뒤 배치도를 누르세요</div>
+      <div id="eqArmList"></div>
+    </div>
+
     <div class="map-wrap" id="drawMap">
       <img src="dabs-map.jpg" alt="작업구간 지정용 배치도">
     </div>
@@ -813,6 +877,22 @@ const EQUIPMENT = [
   "고소작업대(시저형)","고소작업대(자주식)","카고 크레인","C.P.B",
   "이삿짐 운반용 리프트","살수차","아스팔트 피니셔","기타"
 ];
+
+/* 장비 아이콘 (분류별) */
+const EQ_ICON = {
+  "불도저":"🚜","굴착기":"🚜","로더":"🚜","모터 그레이더":"🚜","롤러":"🚜","노상안정기":"🚜",
+  "덤프트럭":"🚛","콘크리트 믹서트럭":"🚛","살수차":"🚛","카고 크레인":"🚛","고소작업차(차량탑재형)":"🚛",
+  "타워크레인":"🏗️","기중기(이동식 크레인)":"🏗️","C.P.B":"🏗️","콘크리트 펌프카":"🏗️",
+  "건설용 리프트":"🛗","고소작업대(시저형)":"🛗","고소작업대(자주식)":"🛗","이삿짐 운반용 리프트":"🛗",
+  "콘크리트 피니셔":"🧱","콘크리트 살포기":"🧱","골재살포기":"🧱","아스팔트 피니셔":"🧱",
+  "지게차":"⚙️","공기압축기":"⚙️","천공기":"⚙️","항타 및 항발기":"⚙️","기타":"⚙️"
+};
+function eqIcon(n){ return EQ_ICON[n] || "⚙️"; }
+function eqShort(n){ return n.replace(/\(.*\)/, '').trim(); }
+
+let drawMode = 'zone';   // 'zone' | 'eq'
+let armedEq = null;
+let draftMarks = [];     // [{eq, x, y}]
 
 let selectedCo = COMPANIES[0].name;
 let selFloors = [];
@@ -1571,7 +1651,42 @@ function buildChips(listId, selId, items, selArr){
     '선택: ' + (selArr.length ? selArr.join(', ') : '없음');
 }
 function buildFloorChips(){ buildChips('flChips','flSel', FLOORS, selFloors); }
-function buildEquipChips(){ buildChips('eqChips','eqSel', EQUIPMENT, selEquip); }
+function buildEquipChips(){
+  buildChips('eqChips','eqSel', EQUIPMENT, selEquip);
+  buildArmList();
+}
+
+/* ---------- 장비 배치 모드 ---------- */
+function setMode(m){
+  drawMode = m;
+  document.getElementById('modeZone').classList.toggle('on', m === 'zone');
+  document.getElementById('modeEq').classList.toggle('on', m === 'eq');
+  document.getElementById('eqPick').style.display = (m === 'eq') ? 'block' : 'none';
+  if (m === 'eq') buildArmList();
+}
+function buildArmList(){
+  const box = document.getElementById('eqArmList');
+  if (!box) return;
+  if (!selEquip.length){
+    armedEq = null;
+    box.innerHTML = '<div class="none">먼저 아래 "사용 장비"에서 장비를 선택해 주세요.</div>';
+    return;
+  }
+  if (!selEquip.includes(armedEq)) armedEq = selEquip[0];
+  box.innerHTML = selEquip.map(e =>
+    '<button type="button" class="eq-arm'+(e===armedEq?' on':'')+'" onclick="armEq(\''+
+    e.replace(/'/g,"\\'")+'\')">'+eqIcon(e)+' '+esc(eqShort(e))+'</button>').join('');
+}
+function armEq(e){ armedEq = e; buildArmList(); }
+
+function markHTML(m, idx){
+  const del = (idx !== null && idx !== undefined)
+    ? '<button type="button" class="mdel" onclick="event.stopPropagation(); rmMark('+idx+')">×</button>'
+    : '';
+  return '<div class="eqmark" style="left:'+m.x+'%; top:'+m.y+'%;">' +
+    '<span class="em">'+eqIcon(m.eq)+'</span>'+esc(eqShort(m.eq)) + del + '</div>';
+}
+function rmMark(i){ draftMarks.splice(i,1); drawDraft(); }
 
 function buildFloorFilter(){
   const s = document.getElementById('floorFilter');
@@ -1593,7 +1708,17 @@ function pctPos(e){
   };
 }
 drawMap.addEventListener('pointerdown', e => {
-  if (e.target.classList.contains('zdel')) return;
+  if (e.target.classList.contains('zdel') || e.target.classList.contains('mdel')) return;
+
+  // 장비 배치 모드
+  if (drawMode === 'eq'){
+    if (!armedEq){ alert('배치할 장비를 먼저 선택해 주세요.'); return; }
+    const p = pctPos(e);
+    draftMarks.push({ eq:armedEq, x:p.x, y:p.y });
+    drawDraft();
+    return;
+  }
+
   dragging = true;
   drawMap.setPointerCapture(e.pointerId);
   const p = pctPos(e);
@@ -1624,7 +1749,7 @@ drawMap.addEventListener('pointerup', e => {
 });
 
 function drawDraft(){
-  drawMap.querySelectorAll('.zone').forEach(el => el.remove());
+  drawMap.querySelectorAll('.zone, .eqmark').forEach(el => el.remove());
   draftZones.forEach((z,i) => {
     const el = document.createElement('div');
     el.className = 'zone';
@@ -1636,10 +1761,19 @@ function drawDraft(){
     el.appendChild(del);
     drawMap.appendChild(el);
   });
-  document.getElementById('zoneCount').textContent =
-    draftZones.length ? draftZones.length + '개 구간 지정됨' : '구간 미지정';
+
+  if (draftMarks.length){
+    const holder = document.createElement('div');
+    holder.innerHTML = draftMarks.map((m,i) => markHTML(m,i)).join('');
+    while (holder.firstChild) drawMap.appendChild(holder.firstChild);
+  }
+
+  const parts = [];
+  parts.push(draftZones.length ? draftZones.length + '개 구간' : '구간 미지정');
+  if (draftMarks.length) parts.push('장비 ' + draftMarks.length + '대');
+  document.getElementById('zoneCount').textContent = parts.join(' · ');
 }
-function clearZones(){ draftZones = []; drawDraft(); }
+function clearZones(){ draftZones = []; draftMarks = []; drawDraft(); }
 
 /* ---------- 등록/삭제 ---------- */
 /* ---------- 등록 / 수정 / 삭제 ---------- */
@@ -1654,6 +1788,7 @@ function fillForm(w){
   selFloors = (w.floors || []).slice();
   selEquip  = (w.equip  || []).slice();
   draftZones = (w.zones || []).map(z => ({x:z.x, y:z.y, w:z.w, h:z.h}));
+  draftMarks = (w.marks || []).map(m => ({eq:m.eq, x:m.x, y:m.y}));
   buildCoButtons();
   buildFloorChips();
   buildEquipChips();
@@ -1663,8 +1798,9 @@ function resetForm(){
   document.getElementById('fName').value = '';
   document.getElementById('fDetail').value = '';
   document.getElementById('fCount').value = '';
-  selFloors = []; selEquip = []; draftZones = [];
+  selFloors = []; selEquip = []; draftZones = []; draftMarks = [];
   buildFloorChips(); buildEquipChips(); drawDraft();
+  setMode('zone');
 }
 function setEditMode(on, label){
   const b = document.getElementById('editBanner');
@@ -1701,7 +1837,8 @@ function saveWork(){
     count: document.getElementById('fCount').value.trim(),
     floors: selFloors.slice(),
     equip: selEquip.slice(),
-    zones: draftZones.slice()
+    zones: draftZones.slice(),
+    marks: draftMarks.slice()
   };
 
   if (editingId){
@@ -1828,7 +1965,7 @@ function render(){
 
   // 지도
   const vm = document.getElementById('viewMap');
-  vm.querySelectorAll('.zone').forEach(el => el.remove());
+  vm.querySelectorAll('.zone, .eqmark').forEach(el => el.remove());
   works.forEach(w => {
     (w.zones || []).forEach(z => {
       const el = document.createElement('div');
@@ -1842,6 +1979,11 @@ function render(){
       el.appendChild(lb);
       vm.appendChild(el);
     });
+    if ((w.marks || []).length){
+      const holder = document.createElement('div');
+      holder.innerHTML = w.marks.map(m => markHTML(m, null)).join('');
+      while (holder.firstChild) vm.appendChild(holder.firstChild);
+    }
   });
 
   // 통계
@@ -1885,6 +2027,7 @@ function render(){
         const meta = [];
         if (w.count) meta.push('인원 ' + w.count + '명');
         meta.push('구간 ' + (w.zones||[]).length + '개');
+        if ((w.marks||[]).length) meta.push('장비 ' + w.marks.length + '대');
         return '<div class="work-item" style="border-left-color:'+c+'"' +
           ' onclick="openCompanyModal(\''+esc(w.company)+'\')">' +
           '<div class="wtop"><div>' +
@@ -1923,6 +2066,7 @@ function closeModal(){
 function miniMap(works, dot){
   let z = '';
   works.forEach(w => {
+    (w.marks || []).forEach(m => { z += markHTML(m, null); });
     (w.zones || []).forEach(zz => {
       z += '<div class="zone" style="left:'+zz.x+'%; top:'+zz.y+'%; width:'+zz.w+'%; height:'+zz.h+'%;'
         + 'border-color:'+coColor(w.company)+'; background:'+coColor(w.company)+'2E; pointer-events:none;">'
@@ -1940,6 +2084,7 @@ function workCardHTML(w){
   const meta = [];
   if (w.count) meta.push('인원 ' + w.count + '명');
   meta.push('구간 ' + (w.zones||[]).length + '개');
+  if ((w.marks||[]).length) meta.push('장비 ' + w.marks.length + '대');
   return '<div class="work-item" style="border-left-color:'+c+'; cursor:default">' +
     '<div class="wco" style="color:'+c+'">'+esc(w.company)+'</div>' +
     '<div class="wname">'+esc(w.name)+'</div>' +

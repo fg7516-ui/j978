@@ -125,6 +125,21 @@
   }
   #viewMap .eqmark, .modal-sheet .eqmark{ pointer-events:none; }
 
+  /* 드래그 확대 */
+  .zoombox{
+    position:relative; width:100%; overflow:hidden;
+    border-radius:12px; border:1px solid var(--line);
+    background:#000;
+  }
+  .zoominner{ position:absolute; top:0; left:0; }
+  .zoominner img{ width:100%; height:100%; display:block; }
+  .zoominner .zone{ pointer-events:none; }
+  .zoominner .eqmark{ pointer-events:none; }
+  .zone.sel{
+    border:2.5px dashed #fff; background:rgba(255,255,255,.18);
+    box-shadow:0 0 0 1.5px rgba(0,0,0,.5) inset;
+  }
+
   /* 모드 전환 */
   .mode-row{ display:flex; gap:8px; margin-bottom:10px; }
   .mode-row button{
@@ -527,7 +542,7 @@
     <div class="map-wrap" id="viewMap">
       <img src="dabs-map.jpg" alt="현장 배치도">
     </div>
-    <p class="taphint">구간을 터치하면 해당 위치의 작업 내용이 표시됩니다. 겹친 구간은 여러 작업이 함께 나옵니다.</p>
+    <p class="taphint">구간을 터치하면 해당 위치의 작업이 표시됩니다. 겹친 구간은 여러 작업이 함께 나옵니다.<br>배치도를 드래그하면 그 범위를 확대해서 볼 수 있습니다.</p>
     <div class="legend" id="legend"></div>
 
     <h2>업체별 집계</h2>
@@ -2094,33 +2109,115 @@ function workCardHTML(w){
   '</div>';
 }
 
-/* 대시보드 지도 터치 → 그 지점에 걸친 작업들 */
-document.getElementById('viewMap').addEventListener('click', e => {
-  const r = e.currentTarget.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width * 100;
-  const py = (e.clientY - r.top) / r.height * 100;
+/* 대시보드 지도 — 탭하면 그 지점 작업, 드래그하면 범위 확대 */
+const MAP_W = 1600, MAP_H = 1067;   // dabs-map.jpg 원본 비율
 
+function dashPool(){
   const fl = document.getElementById('floorFilter').value;
-  const pool = fl
-    ? (store[curDate()] || []).filter(w => (w.floors || []).includes(fl))
-    : (store[curDate()] || []);
+  const all = store[curDate()] || [];
+  return fl ? all.filter(w => (w.floors || []).includes(fl)) : all;
+}
 
-  const works = pool.filter(w =>
+/* 선택 범위를 확대해 보여주는 HTML */
+function zoomMap(r, works){
+  const pad = (r.h * MAP_H) / (r.w * MAP_W) * 100;   // 잘라낸 영역 비율
+  let inner = '<img src="dabs-map.jpg" alt="확대 배치도">';
+  works.forEach(w => {
+    (w.marks || []).forEach(m => { inner += markHTML(m, null); });
+    (w.zones || []).forEach(z => {
+      inner += '<div class="zone" style="left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
+        + 'border-color:'+coColor(w.company)+'; background:'+coColor(w.company)+'2E;">'
+        + '<div class="zlabel" style="background:'+coColor(w.company)+'">'+esc(w.name)+'</div>'
+        + '</div>';
+    });
+  });
+  return '<div class="zoombox" style="padding-bottom:'+pad.toFixed(2)+'%">' +
+    '<div class="zoominner" style="width:'+(100/r.w*100).toFixed(3)+'%; height:'+(100/r.h*100).toFixed(3)+'%;' +
+    'left:'+(-r.x/r.w*100).toFixed(3)+'%; top:'+(-r.y/r.h*100).toFixed(3)+'%;">' +
+    inner + '</div></div>';
+}
+
+const viewMap = document.getElementById('viewMap');
+let vDrag = false, vX = 0, vY = 0, vEl = null;
+
+function vPos(e){
+  const r = viewMap.getBoundingClientRect();
+  return {
+    x: Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)),
+    y: Math.min(100, Math.max(0, (e.clientY - r.top) / r.height * 100))
+  };
+}
+
+viewMap.addEventListener('pointerdown', e => {
+  vDrag = true;
+  viewMap.setPointerCapture(e.pointerId);
+  const p = vPos(e);
+  vX = p.x; vY = p.y;
+  vEl = document.createElement('div');
+  vEl.className = 'zone sel';
+  viewMap.appendChild(vEl);
+});
+viewMap.addEventListener('pointermove', e => {
+  if (!vDrag || !vEl) return;
+  const p = vPos(e);
+  vEl.style.left = Math.min(vX,p.x)+'%';
+  vEl.style.top = Math.min(vY,p.y)+'%';
+  vEl.style.width = Math.abs(p.x-vX)+'%';
+  vEl.style.height = Math.abs(p.y-vY)+'%';
+});
+viewMap.addEventListener('pointerup', e => {
+  if (!vDrag) return;
+  vDrag = false;
+  const p = vPos(e);
+  if (vEl){ vEl.remove(); vEl = null; }
+
+  const x = Math.min(vX,p.x), y = Math.min(vY,p.y);
+  const w = Math.abs(p.x-vX), h = Math.abs(p.y-vY);
+
+  if (w > 3 && h > 3) openZoomModal({x:x, y:y, w:w, h:h});
+  else openPointModal(p.x, p.y);
+});
+
+/* 한 지점 터치 */
+function openPointModal(px, py){
+  const works = dashPool().filter(w =>
     (w.zones || []).some(z =>
       px >= z.x && px <= z.x + z.w && py >= z.y && py <= z.y + z.h));
-
   if (!works.length) return;
 
+  const fl = document.getElementById('floorFilter').value;
   document.getElementById('mTitle').textContent =
     works.length > 1 ? '이 위치의 작업 ' + works.length + '건' : '작업 상세';
   document.getElementById('mSub').textContent =
-    curDate() + (works.length > 1 ? ' · 구간이 겹쳐 있습니다' : '');
+    curDate() + (fl ? ' · ' + fl : '') + (works.length > 1 ? ' · 구간이 겹쳐 있습니다' : '');
   document.getElementById('mBody').innerHTML =
     miniMap(works, { x:px, y:py }) +
     '<div class="msec">작업 내용</div>' +
     works.map(workCardHTML).join('');
   document.getElementById('detailModal').classList.add('open');
-});
+}
+
+/* 범위 드래그 → 확대 */
+function openZoomModal(r){
+  const works = dashPool().filter(w =>
+    (w.zones || []).some(z =>
+      z.x < r.x + r.w && z.x + z.w > r.x &&
+      z.y < r.y + r.h && z.y + z.h > r.y));
+
+  const fl = document.getElementById('floorFilter').value;
+  const zoom = (100 / Math.max(r.w, r.h)).toFixed(1);
+
+  document.getElementById('mTitle').textContent = '선택 범위 확대';
+  document.getElementById('mSub').textContent =
+    curDate() + (fl ? ' · ' + fl : '') + ' · 약 ' + zoom + '배 · 포함 작업 ' + works.length + '건';
+  document.getElementById('mBody').innerHTML =
+    zoomMap(r, works) +
+    '<div class="msec">이 범위에 포함된 작업</div>' +
+    (works.length
+      ? works.map(workCardHTML).join('')
+      : '<div class="empty">이 범위에는 등록된 작업이 없습니다.</div>');
+  document.getElementById('detailModal').classList.add('open');
+}
 
 /* 작업현황 항목 터치 → 해당 업체의 그날 작업 전체 + 구간 지도 */
 function openCompanyModal(company, useFloorFilter){

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DABs 일일안전회의 · 더현대광주 신축공사</title>
+<title>DABs - 고위험작업 현황 · 더현대광주 신축공사</title>
 <style>
   @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
 
@@ -170,6 +170,30 @@
   }
   .tag.fl{ background:#E7EFEA; color:#146640; }
 
+  /* 수정 모드 배너 */
+  .edit-banner{
+    display:none;
+    background:#FFF0E6; border:1px solid #FFD9BD;
+    border-radius:12px; padding:11px 14px; margin-bottom:12px;
+    align-items:center; justify-content:space-between; gap:10px;
+  }
+  .edit-banner.on{ display:flex; }
+  .edit-banner .txt{ font-size:12.5px; font-weight:700; color:#B8380A; }
+
+  /* 이전 작업 불러오기 */
+  .load-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .load-row .btn{ flex:1; }
+  .prev-item{
+    width:100%; text-align:left;
+    background:var(--card); border:1px solid var(--line);
+    border-left-width:5px; border-left-style:solid;
+    border-radius:12px; padding:12px 14px; margin-bottom:8px;
+    font-family:inherit; cursor:pointer; color:var(--ink);
+  }
+  .prev-item .pd{ font-size:11px; color:var(--ink-soft); }
+  .prev-item .pc{ font-size:11.5px; font-weight:800; margin-top:2px; }
+  .prev-item .pn{ font-size:14.5px; font-weight:800; margin-top:1px; }
+
   /* 목록 */
   .work-item{
     background:var(--card); border:1px solid var(--line);
@@ -287,7 +311,7 @@
     <a class="back-btn" href="index.html">← 메인으로</a>
   </div>
 
-  <h1>DABs 일일안전회의</h1>
+  <h1>DABs - 고위험작업 현황</h1>
   <p class="page-sub">더현대광주 신축공사 · 업체별 작업구간 관리</p>
 
   <div class="datebar">
@@ -327,6 +351,15 @@
 
   <!-- ===== 작업등록 ===== -->
   <div class="view" id="view-add">
+    <div class="edit-banner" id="editBanner">
+      <span class="txt" id="editTxt">작업 수정 중</span>
+      <button type="button" class="btn btn-ghost" onclick="cancelEdit()">수정 취소</button>
+    </div>
+
+    <div class="load-row">
+      <button type="button" class="btn btn-ghost" onclick="openPrevModal()">🕘 이전 작업 불러오기</button>
+    </div>
+
     <h2>작업구간 지정</h2>
     <p class="hint">배치도 위를 손가락(또는 마우스)으로 드래그하면 구간이 그려져요. 여러 개 추가할 수 있고, 각 구간 오른쪽 위 ×로 지울 수 있어요.</p>
     <div class="map-wrap" id="drawMap">
@@ -365,7 +398,7 @@
         <input type="text" id="fCount" inputmode="numeric" placeholder="예: 12">
       </div>
       <div class="field">
-        <button type="button" class="btn btn-main" onclick="addWork()" style="width:100%; padding:13px;">작업 등록하기</button>
+        <button type="button" class="btn btn-main" id="saveBtn" onclick="saveWork()" style="width:100%; padding:13px;">작업 등록하기</button>
       </div>
     </div>
   </div>
@@ -622,36 +655,134 @@ function drawDraft(){
 function clearZones(){ draftZones = []; drawDraft(); }
 
 /* ---------- 등록/삭제 ---------- */
-function addWork(){
+/* ---------- 등록 / 수정 / 삭제 ---------- */
+let editingId = null;
+let editingDate = null;
+
+function fillForm(w){
+  selectedCo = w.company || COMPANIES[0].name;
+  document.getElementById('fName').value = w.name || '';
+  document.getElementById('fDetail').value = w.detail || '';
+  document.getElementById('fCount').value = w.count || '';
+  selFloors = (w.floors || []).slice();
+  selEquip  = (w.equip  || []).slice();
+  draftZones = (w.zones || []).map(z => ({x:z.x, y:z.y, w:z.w, h:z.h}));
+  buildCoButtons();
+  buildFloorChips();
+  buildEquipChips();
+  drawDraft();
+}
+function resetForm(){
+  document.getElementById('fName').value = '';
+  document.getElementById('fDetail').value = '';
+  document.getElementById('fCount').value = '';
+  selFloors = []; selEquip = []; draftZones = [];
+  buildFloorChips(); buildEquipChips(); drawDraft();
+}
+function setEditMode(on, label){
+  const b = document.getElementById('editBanner');
+  b.classList.toggle('on', !!on);
+  if (on) document.getElementById('editTxt').textContent = label;
+  document.getElementById('saveBtn').textContent = on ? '수정 저장하기' : '작업 등록하기';
+}
+function cancelEdit(){
+  editingId = null; editingDate = null;
+  setEditMode(false);
+  resetForm();
+}
+
+/* 작업현황에서 수정 누르면 */
+function editWork(id){
+  const d = curDate();
+  const w = (store[d] || []).find(x => x.id === id);
+  if (!w) return;
+  editingId = id; editingDate = d;
+  fillForm(w);
+  setEditMode(true, '"' + w.name + '" 수정 중');
+  go('add');
+}
+
+function saveWork(){
   const name = document.getElementById('fName').value.trim();
   if (!name){ alert('작업명을 입력해 주세요.'); return; }
   if (!draftZones.length){ alert('배치도에서 작업구간을 드래그해 지정해 주세요.'); return; }
 
-  const d = curDate();
-  if (!store[d]) store[d] = [];
-  store[d].push({
-    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+  const data = {
     company: selectedCo,
     name: name,
     detail: document.getElementById('fDetail').value.trim(),
     count: document.getElementById('fCount').value.trim(),
     floors: selFloors.slice(),
     equip: selEquip.slice(),
-    zones: draftZones.slice(),
-    at: new Date().toISOString()
-  });
-  persist();
+    zones: draftZones.slice()
+  };
 
-  document.getElementById('fName').value = '';
-  document.getElementById('fDetail').value = '';
-  document.getElementById('fCount').value = '';
-  selFloors = []; selEquip = [];
-  buildFloorChips(); buildEquipChips();
-  draftZones = [];
-  drawDraft();
+  if (editingId){
+    // 수정
+    const arr = store[editingDate] || [];
+    const i = arr.findIndex(x => x.id === editingId);
+    if (i >= 0){
+      arr[i] = Object.assign({}, arr[i], data, { editedAt: new Date().toISOString() });
+    }
+    persist();
+    editingId = null; editingDate = null;
+    setEditMode(false);
+    resetForm();
+    render();
+    go('list');
+    return;
+  }
+
+  // 신규 등록
+  const d = curDate();
+  if (!store[d]) store[d] = [];
+  store[d].push(Object.assign({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    at: new Date().toISOString()
+  }, data));
+  persist();
+  resetForm();
   render();
   go('list');
 }
+
+/* ---------- 이전 작업 불러오기 ---------- */
+function openPrevModal(){
+  const today = curDate();
+  const dates = Object.keys(store).filter(d => d !== today).sort().reverse();
+
+  let items = [];
+  dates.forEach(d => (store[d] || []).forEach(w => items.push({ d:d, w:w })));
+  items = items.slice(0, 40);
+
+  document.getElementById('mTitle').textContent = '이전 작업 불러오기';
+  document.getElementById('mSub').textContent =
+    items.length ? '누르면 ' + today + ' 작업으로 폼에 채워집니다' : '';
+  document.getElementById('mBody').innerHTML = items.length
+    ? '<div class="msec">최근 등록한 작업</div>' + items.map(it => {
+        const c = coColor(it.w.company);
+        const fl = (it.w.floors || []).length ? ' · ' + it.w.floors.join(', ') : '';
+        return '<button type="button" class="prev-item" style="border-left-color:'+c+'"' +
+          ' onclick="loadPrev(\''+it.d+'\',\''+it.w.id+'\')">' +
+          '<div class="pd">'+it.d+fl+'</div>' +
+          '<div class="pc" style="color:'+c+'">'+esc(it.w.company)+'</div>' +
+          '<div class="pn">'+esc(it.w.name)+'</div>' +
+        '</button>';
+      }).join('')
+    : '<div class="empty">이전에 등록한 작업이 없습니다.</div>';
+  document.getElementById('detailModal').classList.add('open');
+}
+function loadPrev(d, id){
+  const w = (store[d] || []).find(x => x.id === id);
+  if (!w) return;
+  editingId = null; editingDate = null;
+  fillForm(w);
+  setEditMode(false);
+  closeModal();
+  go('add');
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
 function delWork(id){
   if (!confirm('이 작업을 삭제할까요?')) return;
   const d = curDate();
@@ -672,7 +803,7 @@ function exportDay(){
   const d = curDate();
   const works = store[d] || [];
   if (!works.length){ alert('이 날짜에는 등록된 작업이 없습니다.'); return; }
-  let txt = '[DABs 일일안전회의] ' + d + '\n더현대광주 신축공사\n\n';
+  let txt = '[DABs - 고위험작업 현황] ' + d + '\n더현대광주 신축공사\n\n';
   works.forEach((w,i) => {
     txt += (i+1) + '. ' + w.company + ' — ' + w.name + '\n';
     if ((w.floors || []).length) txt += '   층: ' + w.floors.join(', ') + '\n';
@@ -764,7 +895,10 @@ function render(){
             '<div class="wco" style="color:'+c+'">'+esc(w.company)+'</div>' +
             '<div class="wname">'+esc(w.name)+'</div>' +
           '</div>' +
-          '<button class="wdel" onclick="event.stopPropagation(); delWork(\''+w.id+'\')">삭제</button></div>' +
+          '<div style="display:flex; gap:2px; flex:0 0 auto">' +
+            '<button class="wdel" style="color:#1D4ED8" onclick="event.stopPropagation(); editWork(\''+w.id+'\')">수정</button>' +
+            '<button class="wdel" onclick="event.stopPropagation(); delWork(\''+w.id+'\')">삭제</button>' +
+          '</div></div>' +
           (w.detail ? '<div class="wdetail">'+esc(w.detail)+'</div>' : '') +
           tagRow(w) +
           '<div class="wmeta">'+meta.join(' · ')+'</div>' +

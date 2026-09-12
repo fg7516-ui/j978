@@ -211,6 +211,54 @@
   .lock-card .err{ font-size:12.5px; color:#A3151F; font-weight:700; margin-bottom:10px; display:none; }
   .lock-card .err.on{ display:block; }
 
+  /* ===== 자재 반입·반출 ===== */
+  .mat-card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:14px 16px; margin-bottom:16px;
+  }
+  .mat-card .mh{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; margin-bottom:2px;
+  }
+  .mat-card .mh .t{ font-size:14px; font-weight:800; }
+  .mat-card .mh .go{ font-size:12px; font-weight:700; color:var(--accent); }
+  .mat-card .none{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+
+  .mat-row{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .mat-row:last-child{ border-bottom:none; }
+  .mat-row .tm{
+    flex:0 0 auto; width:52px;
+    font-size:11.5px; font-weight:800; color:var(--ink);
+    padding-top:1px;
+  }
+  .mat-row .gt{
+    flex:0 0 auto; font-size:10px; font-weight:800;
+    border-radius:5px; padding:2px 6px; color:#fff; margin-top:1px;
+  }
+  .mat-row .gt.g1{ background:#1D4ED8; }
+  .mat-row .gt.g2{ background:#B45309; }
+  .mat-row .info{ flex:1; min-width:0; }
+  .mat-row .info .l1{ font-size:13.5px; font-weight:700; }
+  .mat-row .info .l2{ font-size:12px; color:var(--ink-soft); margin-top:2px; line-height:1.5; }
+  .mat-row .info .l2 a{ color:var(--accent); font-weight:700; text-decoration:none; }
+  .mat-row .rdel{
+    background:none; border:none; color:#A3151F;
+    font-size:11.5px; font-weight:700; cursor:pointer;
+    font-family:inherit; padding:2px; flex:0 0 auto;
+  }
+
+  .gate-toggle{ display:flex; gap:8px; }
+  .gate-toggle button{
+    flex:1; border:2px solid var(--line); background:#fff;
+    border-radius:10px; padding:10px; cursor:pointer;
+    font-family:inherit; font-size:13.5px; font-weight:800; color:var(--ink);
+  }
+  .gate-toggle button.on{ border-color:var(--ink); background:#FFF7F1; }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
   /* 목록 */
   .work-item{
     background:var(--card); border:1px solid var(--line);
@@ -344,6 +392,14 @@
 
   <!-- ===== 대시보드 ===== -->
   <div class="view on" id="view-dash">
+    <div class="mat-card" onclick="openMatModal()" style="cursor:pointer">
+      <div class="mh">
+        <div class="t">🚚 자재 반입 · 반출 계획</div>
+        <div class="go" id="matGo">전체보기 ›</div>
+      </div>
+      <div id="matBrief"></div>
+    </div>
+
     <div class="stats">
       <div class="stat"><div class="n" id="stWorks">0</div><div class="l">등록 작업</div></div>
       <div class="stat"><div class="n" id="stZones">0</div><div class="l">작업구간</div></div>
@@ -371,6 +427,10 @@
     <div class="edit-banner" id="editBanner">
       <span class="txt" id="editTxt">작업 수정 중</span>
       <button type="button" class="btn btn-ghost" onclick="cancelEdit()">수정 취소</button>
+    </div>
+
+    <div class="load-row">
+      <button type="button" class="btn btn-main" onclick="openMatModal()">🚚 자재 반입 · 반출 계획</button>
     </div>
 
     <div class="load-row">
@@ -490,6 +550,75 @@
   </div>
 </div>
 
+<!-- 자재 반입·반출 계획 모달 -->
+<div class="modal-overlay" id="matModal" onclick="if(event.target===this) closeMatModal()">
+  <div class="modal-sheet">
+    <div class="mhead">
+      <div>
+        <div class="mtitle">🚚 자재 반입 · 반출 계획</div>
+        <div class="msub" id="matSub"></div>
+      </div>
+      <button type="button" class="mclose" onclick="closeMatModal()">✕</button>
+    </div>
+
+    <div class="msec">계획 목록</div>
+    <div id="matList"></div>
+
+    <div class="msec">새 계획 추가</div>
+    <div class="form-card">
+      <div class="field">
+        <label>출입장소 *</label>
+        <div class="gate-toggle" id="gateToggle">
+          <button type="button" class="on" data-g="1GATE" onclick="pickGate('1GATE')">1GATE</button>
+          <button type="button" data-g="2GATE" onclick="pickGate('2GATE')">2GATE</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>시간 *</label>
+        <select id="mTime"></select>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label>업체명 *</label>
+          <input type="text" id="mCompany" placeholder="예: 약동산업">
+        </div>
+        <div class="field">
+          <label>자재명 *</label>
+          <input type="text" id="mMaterial" placeholder="예: 본부재">
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label>차량 / 대수</label>
+          <input type="text" id="mVehicle" placeholder="예: 3.5톤 / 2대">
+        </div>
+        <div class="field">
+          <label>하역장소</label>
+          <input type="text" id="mPlace" placeholder="예: 지상1층 B-1">
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label>하역물 담당자</label>
+          <input type="text" id="mHandler" placeholder="예: 유광석">
+        </div>
+        <div class="field">
+          <label>연락처</label>
+          <input type="text" id="mPhone" inputmode="tel" placeholder="010-0000-0000">
+        </div>
+      </div>
+      <div class="field">
+        <button type="button" class="btn btn-main" onclick="addMat()" style="width:100%; padding:13px;">계획 추가하기</button>
+      </div>
+    </div>
+
+    <div class="msec">내보내기</div>
+    <div class="form-card">
+      <button type="button" class="btn btn-ghost" onclick="exportMat()" style="width:100%">이 날짜 자재 계획 복사하기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 하단 고정 탭 -->
 <nav class="tabbar">
   <button type="button" class="on" data-v="dash"  onclick="go('dash')"><span class="ic">📊</span>대시보드</button>
@@ -541,6 +670,164 @@ let selEquip = [];
 let draftZones = [];
 let store = {};
 let db = null;
+
+/* ===================================================================
+   자재 반입 · 반출 계획
+   =================================================================== */
+const TIME_SLOTS = (() => {
+  const a = [];
+  for (let h = 6; h <= 18; h++){
+    const p = n => String(n).padStart(2,'0');
+    a.push(p(h) + '~' + p(h+1));
+  }
+  return a;
+})();
+
+let matStore = {};       // { "YYYY-MM-DD": [ ... ] }
+let matDb = null;
+let pickedGate = '1GATE';
+
+function buildTimeOptions(){
+  document.getElementById('mTime').innerHTML =
+    TIME_SLOTS.map(t => '<option value="'+t+'">'+t+'</option>').join('');
+}
+function pickGate(g){
+  pickedGate = g;
+  document.querySelectorAll('#gateToggle button').forEach(b =>
+    b.classList.toggle('on', b.dataset.g === g));
+}
+
+function loadMatLocal(){
+  try { matStore = JSON.parse(localStorage.getItem('dabs_materials') || '{}'); }
+  catch(e){ matStore = {}; }
+}
+function persistMat(){
+  if (matDb) matDb.set(matStore).catch(()=>{});
+  else { try { localStorage.setItem('dabs_materials', JSON.stringify(matStore)); } catch(e){} }
+}
+
+function matsFor(d){
+  const arr = (matStore[d] || []).slice();
+  arr.sort((a,b) => (a.time||'').localeCompare(b.time||'')
+    || (a.gate||'').localeCompare(b.gate||''));
+  return arr;
+}
+
+function openMatModal(){
+  renderMat();
+  document.getElementById('matModal').classList.add('open');
+}
+function closeMatModal(){
+  document.getElementById('matModal').classList.remove('open');
+}
+
+function addMat(){
+  const company  = document.getElementById('mCompany').value.trim();
+  const material = document.getElementById('mMaterial').value.trim();
+  if (!company){ alert('업체명을 입력해 주세요.'); return; }
+  if (!material){ alert('자재명을 입력해 주세요.'); return; }
+
+  const d = curDate();
+  if (!matStore[d]) matStore[d] = [];
+  matStore[d].push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    gate: pickedGate,
+    time: document.getElementById('mTime').value,
+    company: company,
+    material: material,
+    vehicle: document.getElementById('mVehicle').value.trim(),
+    place: document.getElementById('mPlace').value.trim(),
+    handler: document.getElementById('mHandler').value.trim(),
+    phone: document.getElementById('mPhone').value.trim(),
+    at: new Date().toISOString()
+  });
+  persistMat();
+
+  ['mCompany','mMaterial','mVehicle','mPlace','mHandler','mPhone']
+    .forEach(id => document.getElementById(id).value = '');
+  renderMat();
+  renderMatBrief();
+}
+function delMat(id){
+  if (!confirm('이 계획을 삭제할까요?')) return;
+  const d = curDate();
+  matStore[d] = (matStore[d] || []).filter(x => x.id !== id);
+  if (!matStore[d].length) delete matStore[d];
+  persistMat();
+  renderMat();
+  renderMatBrief();
+}
+
+function matRowHTML(m, withDel){
+  const g = m.gate === '2GATE' ? 'g2' : 'g1';
+  const l2 = [];
+  if (m.vehicle) l2.push(esc(m.vehicle));
+  if (m.place) l2.push('하역: ' + esc(m.place));
+  let handler = '';
+  if (m.handler || m.phone){
+    handler = esc(m.handler || '담당자');
+    if (m.phone) handler += ' <a href="tel:'+esc(m.phone).replace(/[^0-9+]/g,'')+'">'+esc(m.phone)+'</a>';
+  }
+  return '<div class="mat-row">' +
+    '<div class="tm">'+esc(m.time)+'</div>' +
+    '<div class="gt '+g+'">'+esc(m.gate).replace('GATE','G')+'</div>' +
+    '<div class="info">' +
+      '<div class="l1">'+esc(m.company)+' · '+esc(m.material)+'</div>' +
+      (l2.length ? '<div class="l2">'+l2.join(' · ')+'</div>' : '') +
+      (handler ? '<div class="l2">'+handler+'</div>' : '') +
+    '</div>' +
+    (withDel ? '<button class="rdel" onclick="delMat(\''+m.id+'\')">삭제</button>' : '') +
+  '</div>';
+}
+
+function renderMat(){
+  const d = curDate();
+  const arr = matsFor(d);
+  document.getElementById('matSub').textContent =
+    d + (arr.length ? ' · 총 ' + arr.length + '건' : '');
+  document.getElementById('matList').innerHTML = arr.length
+    ? '<div class="form-card" style="padding:4px 14px">' + arr.map(m => matRowHTML(m, true)).join('') + '</div>'
+    : '<div class="empty">이 날짜에 등록된 자재 계획이 없습니다.</div>';
+}
+
+/* 대시보드 요약 */
+function renderMatBrief(){
+  const arr = matsFor(curDate());
+  const box = document.getElementById('matBrief');
+  document.getElementById('matGo').textContent =
+    (arr.length ? arr.length + '건 · ' : '') + '전체보기 ›';
+  box.innerHTML = arr.length
+    ? arr.slice(0,4).map(m => matRowHTML(m, false)).join('') +
+      (arr.length > 4 ? '<div class="none">외 ' + (arr.length-4) + '건 더 있습니다.</div>' : '')
+    : '<div class="none">등록된 자재 반입·반출 계획이 없습니다. 눌러서 추가하세요.</div>';
+}
+
+function exportMat(){
+  const d = curDate();
+  const arr = matsFor(d);
+  if (!arr.length){ alert('이 날짜에는 등록된 자재 계획이 없습니다.'); return; }
+  let txt = '[자재 반입·반출 계획] ' + d + '\n더현대광주 신축공사\n\n';
+  ['1GATE','2GATE'].forEach(g => {
+    const rows = arr.filter(m => m.gate === g);
+    if (!rows.length) return;
+    txt += '■ ' + g + '\n';
+    rows.forEach(m => {
+      txt += ' ' + m.time + ' | ' + m.company + ' | ' + m.material;
+      if (m.vehicle) txt += ' | ' + m.vehicle;
+      if (m.place) txt += ' | 하역: ' + m.place;
+      if (m.handler) txt += ' | ' + m.handler + (m.phone ? ' ' + m.phone : '');
+      txt += '\n';
+    });
+    txt += '\n';
+  });
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(txt)
+      .then(() => alert('복사했습니다. 붙여넣기 하세요.'))
+      .catch(() => prompt('아래 내용을 복사하세요', txt));
+  } else {
+    prompt('아래 내용을 복사하세요', txt);
+  }
+}
 
 /* ---------- 관리 탭 잠금 ---------- */
 const ADMIN_PW = "강민수매니저";
@@ -886,6 +1173,8 @@ function render(){
   const d = curDate();
   const all = store[d] || [];
 
+  renderMatBrief();
+
   // 대시보드는 층 필터 적용
   const fl = document.getElementById('floorFilter').value;
   const works = fl
@@ -1084,7 +1373,7 @@ function setSyncLocal(){
     '연결되지 않았습니다. 입력한 내용은 이 기기에만 저장되며 다른 사람에게 보이지 않습니다.';
 }
 function initFirebase(){
-  if (!FIREBASE_CONFIG){ loadLocal(); setSyncLocal(); render(); return; }
+  if (!FIREBASE_CONFIG){ loadLocal(); loadMatLocal(); setSyncLocal(); render(); return; }
   const s1 = document.createElement('script');
   s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
   s1.onload = () => {
@@ -1095,17 +1384,23 @@ function initFirebase(){
         firebase.initializeApp(FIREBASE_CONFIG);
         db = firebase.database().ref('dabs_works');
         db.on('value', snap => { store = snap.val() || {}; render(); });
+        matDb = firebase.database().ref('dabs_materials');
+        matDb.on('value', snap => {
+          matStore = snap.val() || {};
+          renderMatBrief();
+          if (document.getElementById('matModal').classList.contains('open')) renderMat();
+        });
         const n = document.getElementById('syncNote');
         n.className = 'sync-note live';
         n.textContent = '실시간 연동 중입니다. 등록한 내용이 모든 사람에게 바로 공유됩니다.';
         document.getElementById('adminSync').textContent =
           '정상 연결되었습니다. 모든 기기가 실시간으로 같은 내용을 봅니다.';
-      } catch(e){ loadLocal(); setSyncLocal(); render(); }
+      } catch(e){ loadLocal(); loadMatLocal(); setSyncLocal(); render(); }
     };
-    s2.onerror = () => { loadLocal(); setSyncLocal(); render(); };
+    s2.onerror = () => { loadLocal(); loadMatLocal(); setSyncLocal(); render(); };
     document.head.appendChild(s2);
   };
-  s1.onerror = () => { loadLocal(); setSyncLocal(); render(); };
+  s1.onerror = () => { loadLocal(); loadMatLocal(); setSyncLocal(); render(); };
   document.head.appendChild(s1);
 }
 
@@ -1116,6 +1411,7 @@ buildLegend();
 buildFloorChips();
 buildEquipChips();
 buildFloorFilter();
+buildTimeOptions();
 drawDraft();
 initFirebase();
 </script>

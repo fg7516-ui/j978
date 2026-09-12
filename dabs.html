@@ -933,11 +933,12 @@ function render(){
   const rows = COMPANIES.filter(c => sum[c.name]);
   cs.innerHTML = rows.length
     ? rows.map(c =>
-        '<div class="co-row">' +
+        '<div class="co-row" style="cursor:pointer" onclick="openCompanyModal(\''+c.name+'\', true)">' +
           '<div class="bar" style="background:'+c.color+'"></div>' +
           '<div class="nm">'+c.name+'</div>' +
           '<div class="vals">작업 '+sum[c.name].works+'건'+
             (sum[c.name].people ? ' · 인원 '+sum[c.name].people+'명' : '')+'</div>' +
+          '<div style="color:var(--ink-soft); font-size:15px">›</div>' +
         '</div>').join('')
     : '<div class="empty">이 날짜에 등록된 작업이 없습니다.</div>';
 
@@ -1043,8 +1044,17 @@ document.getElementById('viewMap').addEventListener('click', e => {
 });
 
 /* 작업현황 항목 터치 → 해당 업체의 그날 작업 전체 + 구간 지도 */
-function openCompanyModal(company){
-  const works = (store[curDate()] || []).filter(w => w.company === company);
+function openCompanyModal(company, useFloorFilter){
+  let works = (store[curDate()] || []).filter(w => w.company === company);
+
+  let flNote = '';
+  if (useFloorFilter){
+    const fl = document.getElementById('floorFilter').value;
+    if (fl){
+      works = works.filter(w => (w.floors || []).includes(fl));
+      flNote = ' · ' + fl;
+    }
+  }
   if (!works.length) return;
 
   let people = 0, zones = 0;
@@ -1058,7 +1068,8 @@ function openCompanyModal(company){
   if (people) parts.push('인원 ' + people + '명');
 
   document.getElementById('mTitle').textContent = company;
-  document.getElementById('mSub').textContent = curDate() + ' · ' + parts.join(' · ');
+  document.getElementById('mSub').textContent =
+    curDate() + flNote + ' · ' + parts.join(' · ');
   document.getElementById('mBody').innerHTML =
     '<div class="msec">작업구간</div>' +
     miniMap(works, null) +

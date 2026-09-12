@@ -141,6 +141,35 @@
   .co-btn .dot{ width:12px; height:12px; border-radius:3px; flex:0 0 auto; }
   .co-btn.on{ border-color:var(--ink); background:#FFF7F1; }
 
+  /* 칩 선택 (층 / 장비) */
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{
+    border:1.5px solid var(--line); background:#fff;
+    border-radius:99px; padding:7px 12px;
+    font-family:inherit; font-size:12.5px; font-weight:700;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .chip.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .chips-sel{ font-size:11.5px; color:var(--ink-soft); margin-top:7px; }
+
+  /* 대시보드 층 필터 */
+  .sec-head{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; margin:20px 0 8px;
+  }
+  .sec-head h2{ margin:0; }
+  .floor-filter{
+    border:1px solid var(--line); border-radius:10px;
+    padding:7px 10px; font-family:inherit; font-size:13px;
+    font-weight:700; background:var(--card); color:var(--ink);
+  }
+  .tag-row{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+  .tag{
+    font-size:11px; font-weight:700; border-radius:6px;
+    padding:3px 7px; background:#F3ECE4; color:var(--ink-soft);
+  }
+  .tag.fl{ background:#E7EFEA; color:#146640; }
+
   /* 목록 */
   .work-item{
     background:var(--card); border:1px solid var(--line);
@@ -280,7 +309,12 @@
       <div class="stat"><div class="n" id="stPeople">0</div><div class="l">총 인원</div></div>
     </div>
 
-    <h2>작업구간 현황</h2>
+    <div class="sec-head">
+      <h2>작업구간 현황</h2>
+      <select class="floor-filter" id="floorFilter" onchange="render()">
+        <option value="">전체 층</option>
+      </select>
+    </div>
     <div class="map-wrap" id="viewMap">
       <img src="dabs-map.jpg" alt="현장 배치도">
     </div>
@@ -315,6 +349,16 @@
       <div class="field">
         <label>작업 내용 / 안전 중점사항</label>
         <textarea id="fDetail" placeholder="예: 고소작업 구간, 안전대 착용 철저"></textarea>
+      </div>
+      <div class="field">
+        <label>작업 층 (여러 개 선택 가능)</label>
+        <div class="chips" id="flChips"></div>
+        <div class="chips-sel" id="flSel">선택: 없음</div>
+      </div>
+      <div class="field">
+        <label>사용 장비 (여러 개 선택 가능)</label>
+        <div class="chips" id="eqChips"></div>
+        <div class="chips-sel" id="eqSel">선택: 없음</div>
       </div>
       <div class="field">
         <label>작업 인원 (명)</label>
@@ -408,7 +452,20 @@ const COMPANIES = [
   { name:"에스엠파워텍", color:"#7C3AED" }
 ];
 
+const FLOORS = ["B6","B5","B4","B3","B2","B1","1F","2F","3F","4F","5F","6F","7F","8F"];
+
+const EQUIPMENT = [
+  "불도저","굴착기","로더","지게차","덤프트럭","기중기(이동식 크레인)",
+  "모터 그레이더","롤러","노상안정기","콘크리트 피니셔","콘크리트 살포기",
+  "콘크리트 믹서트럭","콘크리트 펌프카","골재살포기","공기압축기","천공기",
+  "항타 및 항발기","타워크레인","건설용 리프트","고소작업차(차량탑재형)",
+  "고소작업대(시저형)","고소작업대(자주식)","카고 크레인","C.P.B",
+  "이삿짐 운반용 리프트","살수차","아스팔트 피니셔","기타"
+];
+
 let selectedCo = COMPANIES[0].name;
+let selFloors = [];
+let selEquip = [];
 let draftZones = [];
 let store = {};
 let db = null;
@@ -472,6 +529,36 @@ function buildLegend(){
     '<span><i style="background:'+c.color+'"></i>'+c.name+'</span>').join('');
   document.getElementById('legend').innerHTML = html;
   document.getElementById('legend2').innerHTML = html;
+}
+
+/* ---------- 층 / 장비 칩 ---------- */
+function buildChips(listId, selId, items, selArr){
+  const box = document.getElementById(listId);
+  box.innerHTML = '';
+  items.forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (selArr.includes(v) ? ' on' : '');
+    b.textContent = v;
+    b.onclick = () => {
+      const i = selArr.indexOf(v);
+      if (i >= 0) selArr.splice(i,1); else selArr.push(v);
+      buildChips(listId, selId, items, selArr);
+    };
+    box.appendChild(b);
+  });
+  document.getElementById(selId).textContent =
+    '선택: ' + (selArr.length ? selArr.join(', ') : '없음');
+}
+function buildFloorChips(){ buildChips('flChips','flSel', FLOORS, selFloors); }
+function buildEquipChips(){ buildChips('eqChips','eqSel', EQUIPMENT, selEquip); }
+
+function buildFloorFilter(){
+  const s = document.getElementById('floorFilter');
+  const keep = s.value;
+  s.innerHTML = '<option value="">전체 층</option>' +
+    FLOORS.map(f => '<option value="'+f+'">'+f+'</option>').join('');
+  s.value = keep;
 }
 
 /* ---------- 드래그 ---------- */
@@ -548,6 +635,8 @@ function addWork(){
     name: name,
     detail: document.getElementById('fDetail').value.trim(),
     count: document.getElementById('fCount').value.trim(),
+    floors: selFloors.slice(),
+    equip: selEquip.slice(),
     zones: draftZones.slice(),
     at: new Date().toISOString()
   });
@@ -556,6 +645,8 @@ function addWork(){
   document.getElementById('fName').value = '';
   document.getElementById('fDetail').value = '';
   document.getElementById('fCount').value = '';
+  selFloors = []; selEquip = [];
+  buildFloorChips(); buildEquipChips();
   draftZones = [];
   drawDraft();
   render();
@@ -584,7 +675,9 @@ function exportDay(){
   let txt = '[DABs 일일안전회의] ' + d + '\n더현대광주 신축공사\n\n';
   works.forEach((w,i) => {
     txt += (i+1) + '. ' + w.company + ' — ' + w.name + '\n';
+    if ((w.floors || []).length) txt += '   층: ' + w.floors.join(', ') + '\n';
     if (w.count) txt += '   인원: ' + w.count + '명\n';
+    if ((w.equip || []).length) txt += '   장비: ' + w.equip.join(', ') + '\n';
     if (w.detail) txt += '   ' + w.detail + '\n';
   });
   if (navigator.clipboard) {
@@ -599,7 +692,13 @@ function exportDay(){
 /* ---------- 그리기 ---------- */
 function render(){
   const d = curDate();
-  const works = store[d] || [];
+  const all = store[d] || [];
+
+  // 대시보드는 층 필터 적용
+  const fl = document.getElementById('floorFilter').value;
+  const works = fl
+    ? all.filter(w => (w.floors || []).includes(fl))
+    : all;
 
   // 지도
   const vm = document.getElementById('viewMap');
@@ -650,11 +749,11 @@ function render(){
         '</div>').join('')
     : '<div class="empty">이 날짜에 등록된 작업이 없습니다.</div>';
 
-  // 목록
-  document.getElementById('workCount').textContent = works.length ? '('+works.length+'건)' : '';
+  // 목록 (층 필터 적용 안 함 — 전체 표시)
+  document.getElementById('workCount').textContent = all.length ? '('+all.length+'건)' : '';
   const list = document.getElementById('workList');
-  list.innerHTML = works.length
-    ? works.map(w => {
+  list.innerHTML = all.length
+    ? all.map(w => {
         const c = coColor(w.company);
         const meta = [];
         if (w.count) meta.push('인원 ' + w.count + '명');
@@ -667,10 +766,18 @@ function render(){
           '</div>' +
           '<button class="wdel" onclick="event.stopPropagation(); delWork(\''+w.id+'\')">삭제</button></div>' +
           (w.detail ? '<div class="wdetail">'+esc(w.detail)+'</div>' : '') +
+          tagRow(w) +
           '<div class="wmeta">'+meta.join(' · ')+'</div>' +
         '</div>';
       }).join('')
     : '<div class="empty">이 날짜에 등록된 작업이 없습니다.</div>';
+}
+
+/* 층 / 장비 태그 줄 */
+function tagRow(w){
+  const fl = (w.floors || []).map(f => '<span class="tag fl">'+esc(f)+'</span>').join('');
+  const eq = (w.equip  || []).map(e => '<span class="tag">'+esc(e)+'</span>').join('');
+  return (fl || eq) ? '<div class="tag-row">' + fl + eq + '</div>' : '';
 }
 function esc(s){
   return String(s||'').replace(/[&<>"']/g, m =>
@@ -707,6 +814,7 @@ function workCardHTML(w){
     '<div class="wco" style="color:'+c+'">'+esc(w.company)+'</div>' +
     '<div class="wname">'+esc(w.name)+'</div>' +
     (w.detail ? '<div class="wdetail">'+esc(w.detail)+'</div>' : '') +
+    tagRow(w) +
     '<div class="wmeta">'+meta.join(' · ')+'</div>' +
   '</div>';
 }
@@ -717,7 +825,12 @@ document.getElementById('viewMap').addEventListener('click', e => {
   const px = (e.clientX - r.left) / r.width * 100;
   const py = (e.clientY - r.top) / r.height * 100;
 
-  const works = (store[curDate()] || []).filter(w =>
+  const fl = document.getElementById('floorFilter').value;
+  const pool = fl
+    ? (store[curDate()] || []).filter(w => (w.floors || []).includes(fl))
+    : (store[curDate()] || []);
+
+  const works = pool.filter(w =>
     (w.zones || []).some(z =>
       px >= z.x && px <= z.x + z.w && py >= z.y && py <= z.y + z.h));
 
@@ -794,6 +907,9 @@ function initFirebase(){
 document.getElementById('theDate').value = todayStr();
 buildCoButtons();
 buildLegend();
+buildFloorChips();
+buildEquipChips();
+buildFloorFilter();
 drawDraft();
 initFirebase();
 </script>

@@ -123,7 +123,9 @@
     font-size:10px; font-weight:800; line-height:1.1;
     box-shadow:0 1px 4px rgba(0,0,0,.4);
   }
-  .eqmark .em{ font-size:12px; }
+  .eqmark .em{ display:inline-flex; align-items:center; }
+  .eqi{ vertical-align:-2px; }
+  .eq-arm .eqi{ vertical-align:-3px; margin-right:2px; }
   .eqmark::after{
     content:''; position:absolute; left:50%; bottom:-6px;
     width:0; height:0; margin-left:-4px;
@@ -441,7 +443,7 @@
     font-size:13px;
   }
   .eq-line:last-child{ border-bottom:none; }
-  .eq-line .ei{ font-size:16px; flex:0 0 auto; }
+  .eq-line .ei{ flex:0 0 auto; display:inline-flex; align-items:center; color:var(--accent); }
   .eq-line .en{ flex:1; min-width:0; font-weight:700; }
   .eq-line .ec{ flex:0 0 auto; font-weight:800; color:var(--accent); }
   .eq-card{
@@ -946,17 +948,77 @@ const EQUIPMENT = [
   "이삿짐 운반용 리프트","살수차","아스팔트 피니셔","기타"
 ];
 
-/* 장비 아이콘 (분류별) */
-const EQ_ICON = {
-  "불도저":"🚜","굴착기":"🚜","로더":"🚜","모터 그레이더":"🚜","롤러":"🚜","노상안정기":"🚜",
-  "덤프트럭":"🚛","콘크리트 믹서트럭":"🚛","살수차":"🚛","카고 크레인":"🚛","고소작업차(차량탑재형)":"🚛",
-  "타워크레인":"🏗️","기중기(이동식 크레인)":"🏗️","C.P.B":"🏗️","콘크리트 펌프카":"🏗️",
-  "건설용 리프트":"🛗","고소작업대(시저형)":"🛗","고소작업대(자주식)":"🛗","이삿짐 운반용 리프트":"🛗",
-  "콘크리트 피니셔":"🧱","콘크리트 살포기":"🧱","골재살포기":"🧱","아스팔트 피니셔":"🧱",
-  "지게차":"⚙️","공기압축기":"⚙️","천공기":"⚙️","항타 및 항발기":"⚙️","기타":"⚙️"
+/* 장비 아이콘 — 장비별 전용 도형 */
+const EQ_SVG = {
+  excavator: '<rect x="1.6" y="16.6" width="12.6" height="3.8" rx="1.9"/><rect x="3.2" y="10.6" width="6.8" height="5.6" rx="0.9"/><path d="M10 12.6L15.5 6.4l1.9 1.4-5.5 6.2z"/><path d="M15.7 6.5l4.9 4.9-1.7 1.5-4.9-4.9z"/><path d="M18.3 12.1h3.4l-1.1 3.6-3.2-1.3z"/>',
+  dozer: '<rect x="2.4" y="16.4" width="12.4" height="3.8" rx="1.9"/><rect x="5.4" y="9.6" width="7.6" height="6" rx="1"/><path d="M16.4 7.6h3v9.6h-3z"/><path d="M13 12.4h3.6v2.4H13z"/>',
+  loader: '<path d="M1 11.4h5.8v5.2H1z"/><path d="M6.4 12.6h3.2v2.4H6.4z"/><rect x="9.2" y="8.2" width="8.4" height="6.4" rx="1.1"/><path d="M8.8 14h9.6v2.6H8.8z"/><circle cx="11.4" cy="18.2" r="2.6"/><circle cx="18.2" cy="18.2" r="2.6"/>',
+  dump: '<path d="M3 7l9 2.4-1 3.6L2 10.6z"/><path d="M13 11h5l3 3.2V17H13z"/><circle cx="6.5" cy="18.6" r="2.2"/><circle cx="17" cy="18.6" r="2.2"/><path d="M2 15h9v2.2H2z"/>',
+  tower: '<path d="M10 3h1.6v15H10z"/><path d="M3 4.6h16v1.6H3z"/><path d="M6 6.2h1.2v4H6z"/><path d="M5 10h3.2v1.4H5z"/><path d="M6.5 20.6h8.6v-2.4H6.5z"/>',
+  mobile: '<path d="M20 5l1.4 1-8 6.2-1.4-1.8z"/><path d="M3 12h8v4H3z"/><path d="M11 13h4l2.6 2.6V16H11z"/><circle cx="6" cy="18.6" r="2.2"/><circle cx="15" cy="18.6" r="2.2"/>',
+  forklift: '<path d="M4 10h6v6H4z"/><path d="M11.6 4h1.8v13h-1.8z"/><path d="M13.4 15h5.6v1.7h-5.6z"/><path d="M3 16.5h8v1.4H3z"/><circle cx="6" cy="19" r="2"/><circle cx="14" cy="19" r="1.6"/>',
+  scissor: '<path d="M5 3.5h12v2H5z"/><path d="M6.4 6l9 7-1.2 1.5-9-7z"/><path d="M15.4 6l-9 7 1.2 1.5 9-7z"/><path d="M4.5 16h13v1.6h-13z"/><circle cx="7" cy="19.2" r="1.7"/><circle cx="15" cy="19.2" r="1.7"/>',
+  lift: '<path d="M3.5 3h1.7v18H3.5z"/><path d="M18.8 3h1.7v18h-1.7z"/><path d="M7 7h10v7H7z"/><path d="M7 10.2h10v1.4H7z"/><path d="M2 19.4h20V21H2z"/>',
+  pump: '<path d="M4 5.6l7.6 2.8-.8 2-7.6-2.8z"/><path d="M11.4 8.2L20 6.4l.5 2-8.6 1.8z"/><path d="M3 12h11v4H3z"/><path d="M14 13h4l2.6 2.6V16H14z"/><circle cx="7" cy="18.6" r="2.2"/><circle cx="16.5" cy="18.6" r="2.2"/>',
+  mixer: '<path d="M8 6.5c4.6-1.6 8.6.6 9.4 4.4.8 3.8-1.8 6-5.4 5.4L8 6.5z"/><path d="M2 10h6.5v6H2z"/><circle cx="5" cy="18.6" r="2.2"/><circle cx="15" cy="18.6" r="2.2"/>',
+  roller: '<rect x="1.2" y="11.2" width="7.4" height="8.4" rx="3.7"/><rect x="8.4" y="7.6" width="7.8" height="6.4" rx="1.1"/><rect x="15.4" y="12.6" width="7" height="7" rx="3.5"/>',
+  grader: '<path d="M12 6h7v5h-7z"/><path d="M3 13.6h13v1.8H3z"/><path d="M5.5 11h1.6v4H5.5z"/><circle cx="4.5" cy="18" r="2.1"/><circle cx="13" cy="18" r="2.1"/><circle cx="18.5" cy="18" r="2.1"/>',
+  drill: '<path d="M9.6 2h2v14h-2z"/><path d="M13 4h1.3v11H13z"/><path d="M11.6 6.5h1.6v1.3h-1.6zM11.6 10h1.6v1.3h-1.6z"/><path d="M4 16.5h13v2.2H4z"/><circle cx="6.5" cy="20" r="1.4"/><circle cx="14.5" cy="20" r="1.4"/>',
+  compressor: '<rect x="3" y="8" width="15" height="8" rx="1.4"/><path d="M18 10.5h3v3h-3z" /><path d="M6 10.4h3v3.2H6z" fill-opacity=".35"/><circle cx="6.5" cy="17.6" r="1.5"/><circle cx="15" cy="17.6" r="1.5"/>',
+  paver: '<path d="M7 6h8v5H7z"/><path d="M3 11h17v4H3z"/><path d="M2 15.5h19v2.2H2z"/><circle cx="6" cy="19.4" r="1.5"/><circle cx="16" cy="19.4" r="1.5"/>',
+  water: '<rect x="2.6" y="8.4" width="10.4" height="6.2" rx="2.6"/><path d="M13.4 9.8h3.2l3.4 3.4v1.4h-6.6z"/><path d="M2 14.8h18v2H2z"/><circle cx="6.4" cy="18.4" r="2.1"/><circle cx="16.4" cy="18.4" r="2.1"/><circle cx="1.3" cy="17" r="0.9"/><circle cx="2.4" cy="19.6" r="0.8"/><circle cx="4.3" cy="21.2" r="0.7"/>',
+  spreader: '<path d="M5 5h13l-2.4 6H7.4z"/><path d="M7.4 12.4h8.2v1.6H7.4z"/><path d="M3 15h17v2.4H3z"/><circle cx="7" cy="19.6" r="1.5"/><circle cx="16" cy="19.6" r="1.5"/>',
+  etc: '<path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2zm0 5.5a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8z"/><path d="M12 2.6l1.7 2.1 2.6-.8.6 2.7 2.7.6-.8 2.6 2.1 1.7-2.1 1.7.8 2.6-2.7.6-.6 2.7-2.6-.8L12 21.4l-1.7-2.1-2.6.8-.6-2.7-2.7-.6.8-2.6-2.1-1.7 2.1-1.7-.8-2.6 2.7-.6.6-2.7 2.6.8z" opacity=".45"/>'
 };
-function eqIcon(n){ return EQ_ICON[n] || "⚙️"; }
-function eqShort(n){ return n.replace(/\(.*\)/, '').trim(); }
+const EQ_MAP = {
+  "불도저":"dozer",
+  "굴착기":"excavator",
+  "로더":"loader",
+  "모터 그레이더":"grader",
+  "롤러":"roller",
+  "노상안정기":"paver",
+  "덤프트럭":"dump",
+  "콘크리트 믹서트럭":"mixer",
+  "살수차":"water",
+  "카고 크레인":"mobile",
+  "고소작업차(차량탑재형)":"mobile",
+  "타워크레인":"tower",
+  "기중기(이동식 크레인)":"mobile",
+  "C.P.B":"tower",
+  "콘크리트 펌프카":"pump",
+  "건설용 리프트":"lift",
+  "고소작업대(시저형)":"scissor",
+  "고소작업대(자주식)":"scissor",
+  "이삿짐 운반용 리프트":"lift",
+  "콘크리트 피니셔":"paver",
+  "콘크리트 살포기":"spreader",
+  "골재살포기":"spreader",
+  "아스팔트 피니셔":"paver",
+  "지게차":"forklift",
+  "공기압축기":"compressor",
+  "천공기":"drill",
+  "항타 및 항발기":"drill",
+  "기타":"etc"
+};
+function eqIcon(n, px){
+  px = px || 13;
+  const k = EQ_MAP[n] || 'etc';
+  return '<svg class="eqi" viewBox="0 0 24 24" width="'+px+'" height="'+px+'" ' +
+         'fill="currentColor" aria-hidden="true">' + EQ_SVG[k] + '</svg>';
+}
+const EQ_SHORT = {
+  "고소작업대(시저형)":"고소작업대(시저)",
+  "고소작업대(자주식)":"고소작업대(자주)",
+  "이삿짐 운반용 리프트":"이삿짐 리프트",
+  "콘크리트 믹서트럭":"믹서트럭",
+  "콘크리트 펌프카":"펌프카",
+  "콘크리트 피니셔":"콘크리트 피니셔",
+  "항타 및 항발기":"항타·항발기"
+};
+function eqShort(n){
+  if (EQ_SHORT[n]) return EQ_SHORT[n];
+  return n.replace(/\(.*\)/, '').trim();
+}
 
 let drawMode = 'zone';   // 'zone' | 'eq'
 let armedEq = null;
@@ -1642,7 +1704,7 @@ function coSummary(works){
 function eqLabel(eqMap){
   const ks = Object.keys(eqMap || {});
   if (!ks.length) return '';
-  return ks.map(k => eqIcon(k) + ' ' + esc(eqShort(k)) + ' ' + eqMap[k]).join(' · ');
+  return ks.map(k => eqIcon(k, 11) + ' ' + esc(eqShort(k)) + ' ' + eqMap[k]).join(' · ');
 }
 
 /* 총 인원 상세 */
@@ -1703,7 +1765,7 @@ function openEquipModal(){
     html += '<div class="msec">장비 종류별 합계</div>' +
       '<div class="eq-sum">' +
       Object.keys(allEq).sort((a,b) => allEq[b]-allEq[a]).map(k =>
-        '<div class="eq-line"><span class="ei">'+eqIcon(k)+'</span>' +
+        '<div class="eq-line"><span class="ei">'+eqIcon(k, 18)+'</span>' +
         '<span class="en">'+esc(k)+'</span>' +
         '<span class="ec">'+allEq[k]+'대</span></div>').join('') +
       '</div>';
@@ -1714,7 +1776,7 @@ function openEquipModal(){
     ? rows.map(c => {
         const m = sum[c.name];
         const list = Object.keys(m.eq).map(k =>
-          '<div class="eq-line"><span class="ei">'+eqIcon(k)+'</span>' +
+          '<div class="eq-line"><span class="ei">'+eqIcon(k, 18)+'</span>' +
           '<span class="en">'+esc(k)+'</span>' +
           '<span class="ec">'+m.eq[k]+'대</span></div>').join('');
         const plan = Object.keys(m.eqPlan);
@@ -1903,7 +1965,7 @@ function buildArmList(){
   if (!selEquip.includes(armedEq)) armedEq = selEquip[0];
   box.innerHTML = selEquip.map(e =>
     '<button type="button" class="eq-arm'+(e===armedEq?' on':'')+'" onclick="armEq(\''+
-    e.replace(/'/g,"\\'")+'\')">'+eqIcon(e)+' '+esc(eqShort(e))+'</button>').join('');
+    e.replace(/'/g,"\\'")+'\')">'+eqIcon(e, 14)+' '+esc(eqShort(e))+'</button>').join('');
 }
 function armEq(e){ armedEq = e; buildArmList(); }
 
@@ -1912,7 +1974,7 @@ function markHTML(m, idx){
     ? '<button type="button" class="mdel" onclick="event.stopPropagation(); rmMark('+idx+')">×</button>'
     : '';
   return '<div class="eqmark" style="left:'+m.x+'%; top:'+m.y+'%;">' +
-    '<span class="em">'+eqIcon(m.eq)+'</span>'+esc(eqShort(m.eq)) + del + '</div>';
+    '<span class="em">'+eqIcon(m.eq, 12)+'</span>'+esc(eqShort(m.eq)) + del + '</div>';
 }
 function rmMark(i){ draftMarks.splice(i,1); drawDraft(); }
 

@@ -292,6 +292,79 @@
   .shift-note.early{ background:#E6F4EC; border:1px solid #BFE3CE; color:#146640; }
   .shift-note.night{ background:#EDEBF5; border:1px solid #CFC9E8; color:#3B3268; }
 
+  /* 고위험 작업 — 경광등 표시 */
+  .zone.risk{
+    border-color:#DC2626 !important;
+    border-width:3px !important;
+    animation:riskPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes riskPulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(220,38,38,.75), 0 0 14px rgba(220,38,38,.5) inset; }
+    50%    { box-shadow:0 0 0 7px rgba(220,38,38,0), 0 0 4px rgba(220,38,38,.2) inset; }
+  }
+  .beacon{
+    position:absolute; top:-11px; left:-11px;
+    width:22px; height:22px; border-radius:50%;
+    background:radial-gradient(circle at 35% 32%, #FF8A8A 0%, #DC2626 62%, #8F1620 100%);
+    border:2px solid #fff;
+    box-shadow:0 0 10px rgba(220,38,38,.95);
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:#fff; font-weight:900;
+    animation:beaconGlow 1.1s ease-in-out infinite;
+    z-index:3;
+  }
+  @keyframes beaconGlow{
+    0%,100%{ box-shadow:0 0 10px rgba(220,38,38,.95); transform:scale(1); }
+    50%    { box-shadow:0 0 20px rgba(220,38,38,1); transform:scale(1.16); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .zone.risk, .beacon{ animation:none; }
+  }
+
+  .shift-pill.risk{ background:#FDECEC; border:1px solid #F5BFBF; color:#A3151F; cursor:pointer; }
+  .shift-note.risk{ background:#FDECEC; border:1px solid #F5BFBF; color:#A3151F; }
+  .tag.risk{ background:#DC2626; color:#fff; }
+
+  .risk-btn{
+    display:block; width:100%; margin-top:10px;
+    border:1.5px solid var(--line); background:#fff;
+    border-radius:9px; padding:9px;
+    font-family:inherit; font-size:12px; font-weight:800;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .risk-btn.on{ background:#DC2626; border-color:#8F1620; color:#fff; }
+
+  /* 배치 인원 */
+  .crew-head{
+    font-size:12.5px; font-weight:800; color:var(--ink-soft);
+    background:#F7F1EA; border-radius:9px;
+    padding:9px 12px; margin-bottom:12px;
+  }
+  .dotc{
+    display:inline-block; width:9px; height:9px; border-radius:50%;
+    margin-right:5px; vertical-align:0px;
+  }
+  .dotc.sig{ background:#DC2626; }
+  .dotc.gui{ background:#EAB308; }
+
+  /* 신호수 · 유도원 마커 */
+  .eqmark.sig{ background:rgba(190,18,18,.92); }
+  .eqmark.sig::after{ border-top-color:rgba(190,18,18,.92); }
+  .eqmark.gui{ background:rgba(202,138,4,.94); }
+  .eqmark.gui::after{ border-top-color:rgba(202,138,4,.94); }
+
+  .crew-row{
+    display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;
+  }
+  .crew-chip{
+    font-size:11px; font-weight:700; border-radius:7px;
+    padding:4px 8px; background:#F1EDE8; color:var(--ink-soft);
+  }
+  .crew-chip b{ color:var(--ink); }
+  .crew-chip a{ color:var(--accent); font-weight:800; text-decoration:none; }
+  .crew-chip.sig{ background:#FDECEC; color:#A3151F; }
+  .crew-chip.gui{ background:#FEF6DC; color:#8A6A00; }
+
   /* 수정 모드 배너 */
   .edit-banner{
     display:none;
@@ -715,6 +788,42 @@
         </div>
         <div class="time-note" id="timeNote"></div>
       </div>
+      <div class="field">
+        <label>작업지휘자 *</label>
+        <div class="two-col">
+          <input type="text" id="fLeadName" placeholder="이름">
+          <input type="text" id="fLeadPhone" inputmode="tel" placeholder="연락처">
+        </div>
+      </div>
+      <div class="field">
+        <label>관리감독자</label>
+        <div class="two-col">
+          <input type="text" id="fSupName" placeholder="이름">
+          <input type="text" id="fSupPhone" inputmode="tel" placeholder="연락처">
+        </div>
+      </div>
+
+      <div id="crewBox" style="display:none">
+        <div class="crew-head">🚜 장비 사용 시 배치 인원</div>
+        <div class="field">
+          <label>운전원</label>
+          <div class="two-col">
+            <input type="text" id="fOpName" placeholder="이름">
+            <input type="text" id="fOpPhone" inputmode="tel" placeholder="연락처">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label><span class="dotc sig"></span>신호수</label>
+            <input type="text" id="fSigName" placeholder="이름">
+          </div>
+          <div class="field">
+            <label><span class="dotc gui"></span>유도원</label>
+            <input type="text" id="fGuiName" placeholder="이름">
+          </div>
+        </div>
+      </div>
+
       <div class="field">
         <label>작업 인원 (명)</label>
         <input type="text" id="fCount" inputmode="numeric" placeholder="예: 12">
@@ -1800,6 +1909,7 @@ function eqLabel(eqMap){
 
 /* 총 인원 상세 */
 function openPeopleModal(){
+  lastModal = { fn: openPeopleModal, arg: null };
   const works = dashPool();
   const sum = coSummary(works);
   const rows = COMPANIES.filter(c => sum[c.name] && sum[c.name].people);
@@ -1833,6 +1943,7 @@ function openPeopleModal(){
 
 /* 총 장비 상세 */
 function openEquipModal(){
+  lastModal = { fn: openEquipModal, arg: null };
   const works = dashPool();
   const sum = coSummary(works);
   const rows = COMPANIES.filter(c => sum[c.name] &&
@@ -1886,8 +1997,64 @@ function openEquipModal(){
   document.getElementById('detailModal').classList.add('open');
 }
 
+/* ---------- 고위험 작업 지정 (관리자) ---------- */
+const RISK_PW = "0000";
+let riskUnlocked = false;
+
+function toggleRisk(id){
+  if (!riskUnlocked){
+    const v = prompt('고위험 작업 지정은 관리자만 가능합니다.\n비밀번호를 입력하세요.');
+    if (v === null) return;
+    if (v.trim() !== RISK_PW){ alert('비밀번호가 올바르지 않습니다.'); return; }
+    riskUnlocked = true;
+  }
+  const d = curDate();
+  const w = (store[d] || []).find(x => x.id === id);
+  if (!w) return;
+  w.risk = !w.risk;
+  persist();
+  render();
+  refreshOpenModal();
+}
+
+/* 열려 있는 팝업을 현재 내용으로 다시 그림 */
+let lastModal = null;   // { fn, arg }
+function refreshOpenModal(){
+  const m = document.getElementById('detailModal');
+  if (!m.classList.contains('open') || !lastModal) return;
+  lastModal.fn(lastModal.arg, lastModal.arg2);
+}
+
+/* 고위험 작업 상세 */
+function openRiskModal(){
+  lastModal = { fn: openRiskModal, arg: null };
+  const works = dashPool().filter(w => w.risk);
+  if (!works.length){ closeModal(); return; }
+
+  const fl = document.getElementById('floorFilter').value;
+  let people = 0;
+  works.forEach(w => {
+    const n = parseInt(w.count, 10);
+    if (!isNaN(n)) people += n;
+  });
+
+  document.getElementById('mTitle').textContent = '🚨 고위험 작업';
+  document.getElementById('mSub').textContent =
+    curDate() + (fl ? ' · ' + fl : '') + ' · ' + works.length + '건' +
+    (people ? ' · 인원 ' + people + '명' : '');
+  document.getElementById('mBody').innerHTML =
+    '<div class="shift-note risk">관리자가 고위험으로 지정한 작업입니다. ' +
+    '작업 전 안전조치 확인과 관리감독자 입회 여부를 점검하세요.</div>' +
+    '<div class="msec">작업구간</div>' +
+    miniMap(works, null) +
+    '<div class="msec">작업 내용</div>' +
+    works.map(workCardHTML).join('');
+  document.getElementById('detailModal').classList.add('open');
+}
+
 /* 조출 · 야간 작업 상세 */
 function openShiftModal(kind){
+  lastModal = { fn: openShiftModal, arg: kind };
   const isE = (kind === 'early');
   const works = dashPool().filter(isE ? isEarly : isNight);
   if (!works.length) return;
@@ -2088,6 +2255,11 @@ function buildFloorChips(){ buildChips('flChips','flSel', FLOORS, selFloors); }
 function buildEquipChips(){
   buildChips('eqChips','eqSel', EQUIPMENT, selEquip);
   buildArmList();
+  updateCrewVisible();
+}
+function updateCrewVisible(){
+  const box = document.getElementById('crewBox');
+  if (box) box.style.display = selEquip.length ? 'block' : 'none';
 }
 
 /* ---------- 장비 배치 모드 ---------- */
@@ -2101,22 +2273,39 @@ function setMode(m){
 function buildArmList(){
   const box = document.getElementById('eqArmList');
   if (!box) return;
-  if (!selEquip.length){
-    armedEq = null;
-    box.innerHTML = '<div class="none">먼저 아래 "사용 장비"에서 장비를 선택해 주세요.</div>';
-    return;
-  }
-  if (!selEquip.includes(armedEq)) armedEq = selEquip[0];
-  box.innerHTML = selEquip.map(e =>
+
+  let html = selEquip.map(e =>
     '<button type="button" class="eq-arm'+(e===armedEq?' on':'')+'" onclick="armEq(\''+
     e.replace(/'/g,"\\'")+'\')">'+eqIcon(e, 14)+' '+esc(eqShort(e))+'</button>').join('');
+
+  const sigOn = armedEq === '__sig__', guiOn = armedEq === '__guide__';
+  html += '<button type="button" class="eq-arm'+(sigOn?' on':'')+'"' +
+          ' style="border-color:#DC2626;' + (sigOn ? 'background:#DC2626; color:#fff;' : 'color:#A3151F;') + '"' +
+          ' onclick="armEq(\'__sig__\')"><span class="dotc sig"></span>신호수</button>';
+  html += '<button type="button" class="eq-arm'+(guiOn?' on':'')+'"' +
+          ' style="border-color:#CA8A04;' + (guiOn ? 'background:#CA8A04; color:#fff;' : 'color:#8A6A00;') + '"' +
+          ' onclick="armEq(\'__guide__\')"><span class="dotc gui"></span>유도원</button>';
+
+  if (armedEq && armedEq !== '__sig__' && armedEq !== '__guide__' && !selEquip.includes(armedEq))
+    armedEq = selEquip.length ? selEquip[0] : null;
+
+  box.innerHTML =
+    (selEquip.length ? ''
+      : '<div class="none" style="margin-bottom:8px">장비는 아래 "사용 장비"에서 먼저 선택해 주세요. 신호수·유도원은 바로 배치할 수 있습니다.</div>') +
+    html;
 }
 function armEq(e){ armedEq = e; buildArmList(); }
 
+function markKind(m){ return m.t || 'eq'; }
 function markHTML(m, idx){
   const del = (idx !== null && idx !== undefined)
     ? '<button type="button" class="mdel" onclick="event.stopPropagation(); rmMark('+idx+')">×</button>'
     : '';
+  const k = markKind(m);
+  if (k === 'sig')
+    return '<div class="eqmark sig" style="left:'+m.x+'%; top:'+m.y+'%;">신호수' + del + '</div>';
+  if (k === 'guide')
+    return '<div class="eqmark gui" style="left:'+m.x+'%; top:'+m.y+'%;">유도원' + del + '</div>';
   return '<div class="eqmark" style="left:'+m.x+'%; top:'+m.y+'%;">' +
     '<span class="em">'+eqIcon(m.eq, 12)+'</span>'+esc(eqShort(m.eq)) + del + '</div>';
 }
@@ -2146,9 +2335,11 @@ drawMap.addEventListener('pointerdown', e => {
 
   // 장비 배치 모드
   if (drawMode === 'eq'){
-    if (!armedEq){ alert('배치할 장비를 먼저 선택해 주세요.'); return; }
+    if (!armedEq){ alert('배치할 항목을 먼저 선택해 주세요.'); return; }
     const p = pctPos(e);
-    draftMarks.push({ eq:armedEq, x:p.x, y:p.y });
+    if (armedEq === '__sig__')        draftMarks.push({ t:'sig',   x:p.x, y:p.y });
+    else if (armedEq === '__guide__') draftMarks.push({ t:'guide', x:p.x, y:p.y });
+    else                              draftMarks.push({ t:'eq', eq:armedEq, x:p.x, y:p.y });
     drawDraft();
     return;
   }
@@ -2219,6 +2410,14 @@ function fillForm(w){
   document.getElementById('fName').value = w.name || '';
   document.getElementById('fDetail').value = w.detail || '';
   document.getElementById('fCount').value = w.count || '';
+  document.getElementById('fLeadName').value  = (w.lead  || {}).name  || '';
+  document.getElementById('fLeadPhone').value = (w.lead  || {}).phone || '';
+  document.getElementById('fSupName').value   = (w.sup   || {}).name  || '';
+  document.getElementById('fSupPhone').value  = (w.sup   || {}).phone || '';
+  document.getElementById('fOpName').value    = (w.oper  || {}).name  || '';
+  document.getElementById('fOpPhone').value   = (w.oper  || {}).phone || '';
+  document.getElementById('fSigName').value   = w.sigName || '';
+  document.getElementById('fGuiName').value   = w.guiName || '';
   document.getElementById('fStart').value = w.start || '07';
   document.getElementById('fEnd').value = w.end || '18';
   updateTimePreview();
@@ -2235,6 +2434,9 @@ function resetForm(){
   document.getElementById('fName').value = '';
   document.getElementById('fDetail').value = '';
   document.getElementById('fCount').value = '';
+  ['fLeadName','fLeadPhone','fSupName','fSupPhone',
+   'fOpName','fOpPhone','fSigName','fGuiName']
+    .forEach(id => document.getElementById(id).value = '');
   document.getElementById('fStart').value = '07';
   document.getElementById('fEnd').value = '18';
   updateTimePreview();
@@ -2270,9 +2472,20 @@ function saveWork(){
   if (!name){ alert('작업명을 입력해 주세요.'); return; }
   if (!draftZones.length){ alert('배치도에서 작업구간을 드래그해 지정해 주세요.'); return; }
 
+  const leadName = document.getElementById('fLeadName').value.trim();
+  if (!leadName){ alert('작업지휘자 이름을 입력해 주세요.'); return; }
+
   const data = {
     company: selectedCo,
     name: name,
+    lead: { name: leadName,
+            phone: document.getElementById('fLeadPhone').value.trim() },
+    sup:  { name: document.getElementById('fSupName').value.trim(),
+            phone: document.getElementById('fSupPhone').value.trim() },
+    oper: { name: document.getElementById('fOpName').value.trim(),
+            phone: document.getElementById('fOpPhone').value.trim() },
+    sigName: document.getElementById('fSigName').value.trim(),
+    guiName: document.getElementById('fGuiName').value.trim(),
     detail: document.getElementById('fDetail').value.trim(),
     count: document.getElementById('fCount').value.trim(),
     start: document.getElementById('fStart').value,
@@ -2376,7 +2589,7 @@ function exportDay(){
   if (!works.length){ alert('이 날짜에는 등록된 작업이 없습니다.'); return; }
   let txt = '[DABs - 고위험작업 현황] ' + d + '\n더현대광주 신축공사\n\n';
   works.forEach((w,i) => {
-    txt += (i+1) + '. ' + w.company + ' — ' + w.name + '\n';
+    txt += (i+1) + '. ' + (w.risk ? '[고위험] ' : '') + w.company + ' — ' + w.name + '\n';
     if (w.start && w.end){
       txt += '   시간: ' + timeText(w);
       if (isEarly(w)) txt += ' [조출]';
@@ -2385,6 +2598,14 @@ function exportDay(){
     }
     if ((w.floors || []).length) txt += '   층: ' + w.floors.join(', ') + '\n';
     if (w.count) txt += '   인원: ' + w.count + '명\n';
+    if (w.lead && w.lead.name)
+      txt += '   작업지휘자: ' + w.lead.name + (w.lead.phone ? ' ' + w.lead.phone : '') + '\n';
+    if (w.sup && w.sup.name)
+      txt += '   관리감독자: ' + w.sup.name + (w.sup.phone ? ' ' + w.sup.phone : '') + '\n';
+    if (w.oper && w.oper.name)
+      txt += '   운전원: ' + w.oper.name + (w.oper.phone ? ' ' + w.oper.phone : '') + '\n';
+    if (w.sigName) txt += '   신호수: ' + w.sigName + '\n';
+    if (w.guiName) txt += '   유도원: ' + w.guiName + '\n';
     if ((w.equip || []).length) txt += '   장비: ' + w.equip.join(', ') + '\n';
     if (w.detail) txt += '   ' + w.detail + '\n';
   });
@@ -2418,19 +2639,28 @@ function render(){
   works.forEach(w => {
     (w.zones || []).forEach(z => {
       const el = document.createElement('div');
-      el.className = 'zone';
+      el.className = 'zone' + (w.risk ? ' risk' : '');
       el.style.cssText = 'left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-        + 'border-color:'+coColor(w.company)+'; background:'+coColor(w.company)+'2E;';
+        + 'border-color:'+coColor(w.company)+'; background:'
+        + (w.risk ? 'rgba(220,38,38,.22)' : coColor(w.company)+'2E') + ';';
       const lb = document.createElement('div');
       lb.className = 'zlabel';
-      lb.style.background = coColor(w.company);
-      lb.textContent = w.name;
+      lb.style.background = w.risk ? '#DC2626' : coColor(w.company);
+      lb.textContent = (w.risk ? '🚨 ' : '') + w.name;
       el.appendChild(lb);
+      if (w.risk){
+        const bc = document.createElement('div');
+        bc.className = 'beacon';
+        bc.textContent = '!';
+        el.appendChild(bc);
+      }
       vm.appendChild(el);
     });
-    if ((w.marks || []).length){
+    // 대시보드 지도에는 장비만 표시 (신호수·유도원은 확대 시에만)
+    const eqOnly = (w.marks || []).filter(m => markKind(m) === 'eq');
+    if (eqOnly.length){
       const holder = document.createElement('div');
-      holder.innerHTML = w.marks.map(m => markHTML(m, null)).join('');
+      holder.innerHTML = eqOnly.map(m => markHTML(m, null)).join('');
       while (holder.firstChild) vm.appendChild(holder.firstChild);
     }
   });
@@ -2451,10 +2681,15 @@ function render(){
   // 조출 · 야간 현황
   const early = works.filter(isEarly);
   const night = works.filter(isNight);
+  const risky = works.filter(w => w.risk);
   const sb = document.getElementById('shiftBar');
-  if (early.length || night.length){
+  if (early.length || night.length || risky.length){
     sb.style.display = 'flex';
     let h = '';
+    if (risky.length)
+      h += '<div class="shift-pill risk" onclick="openRiskModal()">' +
+           '<span class="nm">🚨 고위험 작업</span>' +
+           '<span class="ct">' + risky.length + '건 ›</span></div>';
     if (early.length)
       h += '<div class="shift-pill early" onclick="openShiftModal(\'early\')">' +
            '<span class="nm">🌅 조출 작업</span>' +
@@ -2513,6 +2748,7 @@ function render(){
           '</div></div>' +
           (w.detail ? '<div class="wdetail">'+esc(w.detail)+'</div>' : '') +
           tagRow(w) +
+          crewRow(w) +
           '<div class="wmeta">'+meta.join(' · ')+'</div>' +
         '</div>';
       }).join('')
@@ -2521,7 +2757,7 @@ function render(){
 
 /* 층 / 장비 태그 줄 */
 function tagRow(w){
-  let tm = '';
+  let tm = w.risk ? '<span class="tag risk">🚨 고위험</span>' : '';
   if (w.start && w.end){
     tm += '<span class="tag tm">' + esc(timeText(w)) + '</span>';
     if (isEarly(w)) tm += '<span class="tag early">조출</span>';
@@ -2545,11 +2781,16 @@ function closeModal(){
 function miniMap(works, dot){
   let z = '';
   works.forEach(w => {
-    (w.marks || []).forEach(m => { z += markHTML(m, null); });
+    (w.marks || []).filter(m => markKind(m) === 'eq')
+      .forEach(m => { z += markHTML(m, null); });
     (w.zones || []).forEach(zz => {
-      z += '<div class="zone" style="left:'+zz.x+'%; top:'+zz.y+'%; width:'+zz.w+'%; height:'+zz.h+'%;'
-        + 'border-color:'+coColor(w.company)+'; background:'+coColor(w.company)+'2E; pointer-events:none;">'
-        + '<div class="zlabel" style="background:'+coColor(w.company)+'">'+esc(w.name)+'</div>'
+      const rk = w.risk;
+      z += '<div class="zone'+(rk?' risk':'')+'" style="left:'+zz.x+'%; top:'+zz.y+'%; width:'+zz.w+'%; height:'+zz.h+'%;'
+        + 'border-color:'+coColor(w.company)+'; background:'
+        + (rk ? 'rgba(220,38,38,.22)' : coColor(w.company)+'2E') + '; pointer-events:none;">'
+        + (rk ? '<div class="beacon">!</div>' : '')
+        + '<div class="zlabel" style="background:'+(rk?'#DC2626':coColor(w.company))+'">'
+        + (rk?'🚨 ':'') + esc(w.name)+'</div>'
         + '</div>';
     });
   });
@@ -2558,18 +2799,45 @@ function miniMap(works, dot){
 }
 
 /* 작업 카드 HTML (모달 안에서 사용 — 클릭/삭제 없음) */
+function person(label, p, cls){
+  if (!p || !p.name) return '';
+  const tel = p.phone
+    ? ' <a href="tel:'+esc(p.phone).replace(/[^0-9+]/g,'')+'">'+esc(p.phone)+'</a>' : '';
+  return '<span class="crew-chip'+(cls?' '+cls:'')+'">'+label+' <b>'+esc(p.name)+'</b>'+tel+'</span>';
+}
+function crewRow(w){
+  let h = '';
+  h += person('작업지휘자', w.lead);
+  h += person('관리감독자', w.sup);
+  h += person('운전원', w.oper);
+  if (w.sigName) h += '<span class="crew-chip sig">신호수 <b>'+esc(w.sigName)+'</b></span>';
+  if (w.guiName) h += '<span class="crew-chip gui">유도원 <b>'+esc(w.guiName)+'</b></span>';
+  return h ? '<div class="crew-row">' + h + '</div>' : '';
+}
+
 function workCardHTML(w){
   const c = coColor(w.company);
   const meta = [];
   if (w.count) meta.push('인원 ' + w.count + '명');
   meta.push('구간 ' + (w.zones||[]).length + '개');
-  if ((w.marks||[]).length) meta.push('장비 ' + w.marks.length + '대');
-  return '<div class="work-item" style="border-left-color:'+c+'; cursor:default">' +
+  const mk = w.marks || [];
+  const nEq  = mk.filter(m => markKind(m) === 'eq').length;
+  const nSig = mk.filter(m => markKind(m) === 'sig').length;
+  const nGui = mk.filter(m => markKind(m) === 'guide').length;
+  if (nEq)  meta.push('장비 ' + nEq + '대');
+  if (nSig) meta.push('신호수 ' + nSig + '명 배치');
+  if (nGui) meta.push('유도원 ' + nGui + '명 배치');
+  const bd = w.risk ? '#DC2626' : c;
+  return '<div class="work-item" style="border-left-color:'+bd+'; cursor:default">' +
     '<div class="wco" style="color:'+c+'">'+esc(w.company)+'</div>' +
-    '<div class="wname">'+esc(w.name)+'</div>' +
+    '<div class="wname">'+ (w.risk ? '🚨 ' : '') + esc(w.name)+'</div>' +
     (w.detail ? '<div class="wdetail">'+esc(w.detail)+'</div>' : '') +
     tagRow(w) +
+    crewRow(w) +
     '<div class="wmeta">'+meta.join(' · ')+'</div>' +
+    '<button type="button" class="risk-btn'+(w.risk?' on':'')+'" onclick="toggleRisk(\''+w.id+'\')">' +
+      (w.risk ? '🚨 고위험 작업 지정됨 · 누르면 해제' : '고위험 작업으로 지정하기') +
+    '</button>' +
   '</div>';
 }
 
@@ -2587,11 +2855,15 @@ function zoomMap(r, works){
   const pad = (r.h * MAP_H) / (r.w * MAP_W) * 100;   // 잘라낸 영역 비율
   let inner = '<img src="dabs-map.jpg" alt="확대 배치도">';
   works.forEach(w => {
-    (w.marks || []).forEach(m => { inner += markHTML(m, null); });
+    (w.marks || []).forEach(m => { inner += markHTML(m, null); });   // 확대 시 신호수·유도원까지
     (w.zones || []).forEach(z => {
-      inner += '<div class="zone" style="left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-        + 'border-color:'+coColor(w.company)+'; background:'+coColor(w.company)+'2E;">'
-        + '<div class="zlabel" style="background:'+coColor(w.company)+'">'+esc(w.name)+'</div>'
+      const rk = w.risk;
+      inner += '<div class="zone'+(rk?' risk':'')+'" style="left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
+        + 'border-color:'+coColor(w.company)+'; background:'
+        + (rk ? 'rgba(220,38,38,.22)' : coColor(w.company)+'2E') + ';">'
+        + (rk ? '<div class="beacon">!</div>' : '')
+        + '<div class="zlabel" style="background:'+(rk?'#DC2626':coColor(w.company))+'">'
+        + (rk?'🚨 ':'') + esc(w.name)+'</div>'
         + '</div>';
     });
   });
@@ -2644,6 +2916,7 @@ viewMap.addEventListener('pointerup', e => {
 
 /* 한 지점 터치 */
 function openPointModal(px, py){
+  lastModal = { fn: openPointModal, arg: px, arg2: py };
   const works = dashPool().filter(w =>
     (w.zones || []).some(z =>
       px >= z.x && px <= z.x + z.w && py >= z.y && py <= z.y + z.h));
@@ -2685,6 +2958,7 @@ function openZoomModal(r){
 
 /* 작업현황 항목 터치 → 해당 업체의 그날 작업 전체 + 구간 지도 */
 function openCompanyModal(company, useFloorFilter){
+  lastModal = { fn: openCompanyModal, arg: company, arg2: useFloorFilter };
   let works = (store[curDate()] || []).filter(w => w.company === company);
 
   let flNote = '';

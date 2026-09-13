@@ -81,14 +81,39 @@
   .modal-overlay{
     display:none; position:fixed; inset:0; z-index:60;
     background:rgba(20,12,8,.78);
-    align-items:flex-end; justify-content:center;
+    align-items:center; justify-content:center;
+    padding:18px;
   }
   .modal-overlay.open{ display:flex; }
   .modal-sheet{
-    background:var(--bg); width:100%; max-width:720px;
-    border-radius:18px 18px 0 0;
-    max-height:90vh; overflow-y:auto;
-    padding:18px 16px calc(24px + env(safe-area-inset-bottom));
+    background:var(--bg); width:100%; max-width:640px;
+    border-radius:18px;
+    max-height:88vh; overflow-y:auto;
+    padding:18px 16px 22px;
+  }
+  @keyframes zoomIn{
+    from{ transform:translate(var(--dx,0), var(--dy,0)) scale(.12); opacity:0; }
+    to  { transform:translate(0,0) scale(1); opacity:1; }
+  }
+  .modal-sheet.zoomin{ animation:zoomIn .36s cubic-bezier(.2,.85,.3,1); }
+  @media (prefers-reduced-motion: reduce){ .modal-sheet.zoomin{ animation:none; } }
+
+  /* 배치도 확대 */
+  .zoombox{
+    position:relative; width:100%; overflow:hidden;
+    border-radius:12px; border:1px solid var(--line); background:#000;
+  }
+  .zoominner{ position:absolute; top:0; left:0; }
+  .zoominner img{ width:100%; height:100%; display:block; }
+  .hl-box{
+    position:absolute;
+    border:3px solid var(--hl); border-radius:8px;
+    background:rgba(255,212,0,.18);
+    box-shadow:0 0 0 2px rgba(0,0,0,.45), 0 0 16px rgba(255,212,0,.7);
+  }
+  .zoomcap{
+    font-size:11.5px; color:var(--ink-soft);
+    text-align:center; margin:8px 0 18px;
   }
   .mhead{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
   .mtitle{ font-size:18px; font-weight:800; }
@@ -200,7 +225,7 @@ function buildHotspots(){
     b.style.cssText = 'left:'+f.hot.l+'%; top:'+f.hot.t+'%; width:'+f.hot.w+'%; height:'+f.hot.h+'%;';
     b.setAttribute('aria-label', f.name + ' 사진 보기');
     b.innerHTML = '<span class="cam">📷</span>';
-    b.onclick = () => openFac(f.id);
+    b.onclick = () => openFac(f.id, b);
     map.appendChild(b);
   });
 }
@@ -208,7 +233,7 @@ function buildHotspots(){
 /* 아래 항목 목록 */
 function buildList(){
   document.getElementById('facList').innerHTML = FACILITIES.map(f =>
-    '<button type="button" class="fac-item" onclick="openFac(\''+f.id+'\')">' +
+    '<button type="button" class="fac-item" onclick="openFac(\''+f.id+'\', this)">' +
       '<span class="ic">'+f.icon+'</span>' +
       '<span class="tx">' +
         '<span class="nm">'+esc(f.name)+'</span>' +
@@ -218,17 +243,63 @@ function buildList(){
     '</button>').join('');
 }
 
-function openFac(id){
+/* 배치도에서 해당 위치를 확대한 화면 */
+const MAP_W = 1078, MAP_H = 717;   // facilities-map.png 원본 크기
+
+function zoomCrop(f){
+  const cx = f.hot.l + f.hot.w / 2;
+  const cy = f.hot.t + f.hot.h / 2;
+
+  // 주변이 조금 보이도록 여유를 둔 확대 범위
+  let w = Math.min(100, Math.max(f.hot.w * 2.4, 30));
+  let h = Math.min(100, Math.max(f.hot.h * 3.6, 22));
+  let x = Math.max(0, Math.min(100 - w, cx - w / 2));
+  let y = Math.max(0, Math.min(100 - h, cy - h / 2));
+
+  const pad = (h * MAP_H) / (w * MAP_W) * 100;
+  const hl = '<div class="hl-box" style="left:'+f.hot.l+'%; top:'+f.hot.t+
+             '%; width:'+f.hot.w+'%; height:'+f.hot.h+'%"></div>';
+
+  return '<div class="zoombox" style="padding-bottom:'+pad.toFixed(2)+'%">' +
+    '<div class="zoominner" style="width:'+(100/w*100).toFixed(3)+'%; height:'+(100/h*100).toFixed(3)+'%;' +
+    ' left:'+(-x/w*100).toFixed(3)+'%; top:'+(-y/h*100).toFixed(3)+'%;">' +
+    '<img src="facilities-map.png" alt="배치도 확대">' + hl + '</div></div>' +
+    '<div class="zoomcap">배치도에서 이 시설의 위치입니다</div>';
+}
+
+function openFac(id, srcEl){
   const f = FACILITIES.find(x => x.id === id);
   if (!f) return;
+
   document.getElementById('mTitle').textContent = f.name;
   document.getElementById('mSub').textContent = f.sub;
-  document.getElementById('mBody').innerHTML = f.photos.map(p =>
-    '<div class="photo-block">' +
-      '<img src="'+p[0]+'" alt="'+esc(p[1])+'">' +
-      '<div class="cap">'+esc(p[1])+'</div>' +
-    '</div>').join('');
-  document.getElementById('facModal').classList.add('open');
+  document.getElementById('mBody').innerHTML =
+    zoomCrop(f) +
+    f.photos.map(p =>
+      '<div class="photo-block">' +
+        '<img src="'+p[0]+'" alt="'+esc(p[1])+'">' +
+        '<div class="cap">'+esc(p[1])+'</div>' +
+      '</div>').join('');
+
+  const modal = document.getElementById('facModal');
+  const sheet = modal.querySelector('.modal-sheet');
+  modal.classList.add('open');
+  modal.scrollTop = 0;
+  sheet.scrollTop = 0;
+
+  // 누른 위치에서 커지는 느낌
+  let dx = 0, dy = 0;
+  if (srcEl){
+    const r = srcEl.getBoundingClientRect();
+    const s = sheet.getBoundingClientRect();
+    dx = (r.left + r.width/2) - (s.left + s.width/2);
+    dy = (r.top + r.height/2) - (s.top + s.height/2);
+  }
+  sheet.style.setProperty('--dx', dx + 'px');
+  sheet.style.setProperty('--dy', dy + 'px');
+  sheet.classList.remove('zoomin');
+  void sheet.offsetWidth;          // 애니메이션 재시작
+  sheet.classList.add('zoomin');
 }
 function closeFac(){
   document.getElementById('facModal').classList.remove('open');

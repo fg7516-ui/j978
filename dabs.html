@@ -74,7 +74,13 @@
   .hint{ font-size:12px; color:var(--ink-soft); margin:0 0 10px; line-height:1.6; }
 
   /* 요약 카드 */
-  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+  .stats{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+  .stat.tap{ cursor:pointer; position:relative; }
+  .stat.tap::after{
+    content:'›'; position:absolute; top:8px; right:10px;
+    font-size:14px; color:var(--ink-soft); opacity:.7;
+  }
+  .stat.tap:active{ background:#FFFDFA; }
   .stat{
     background:var(--card); border:1px solid var(--line);
     border-radius:12px; padding:12px 10px; text-align:center;
@@ -418,7 +424,42 @@
   }
   .co-row .bar{ width:5px; height:26px; border-radius:3px; flex:0 0 auto; }
   .co-row .nm{ flex:1; font-size:14px; font-weight:700; }
-  .co-row .vals{ font-size:12px; color:var(--ink-soft); text-align:right; }
+  .co-row .vals{ font-size:12px; color:var(--ink-soft); text-align:right; line-height:1.6; }
+  .co-row .eqline{
+    font-size:10.5px; color:var(--ink-soft); font-weight:600;
+    margin-top:3px; line-height:1.5;
+  }
+
+  /* 장비 상세 */
+  .eq-sum{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:6px 14px; margin-bottom:6px;
+  }
+  .eq-line{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 0; border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  .eq-line:last-child{ border-bottom:none; }
+  .eq-line .ei{ font-size:16px; flex:0 0 auto; }
+  .eq-line .en{ flex:1; min-width:0; font-weight:700; }
+  .eq-line .ec{ flex:0 0 auto; font-weight:800; color:var(--accent); }
+  .eq-card{
+    background:var(--card); border:1px solid var(--line);
+    border-left-width:5px; border-left-style:solid;
+    border-radius:12px; padding:10px 14px; margin-bottom:9px;
+  }
+  .eq-card .eh{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-bottom:6px; border-bottom:1px solid var(--line); margin-bottom:2px;
+  }
+  .eq-card .ec-nm{ font-size:14px; font-weight:800; }
+  .eq-card .ec-tot{ font-size:13px; font-weight:800; }
+  .eq-card .eq-plan{
+    font-size:11px; color:var(--ink-soft);
+    background:#F7F1EA; border-radius:7px;
+    padding:6px 9px; margin-top:8px; line-height:1.5;
+  }
 
   /* 관리 카드 */
   .admin-card{
@@ -541,7 +582,8 @@
     <div class="stats">
       <div class="stat"><div class="n" id="stWorks">0</div><div class="l">등록 작업</div></div>
       <div class="stat"><div class="n" id="stZones">0</div><div class="l">작업구간</div></div>
-      <div class="stat"><div class="n" id="stPeople">0</div><div class="l">총 인원</div></div>
+      <div class="stat tap" onclick="openPeopleModal()"><div class="n" id="stPeople">0</div><div class="l">총 인원</div></div>
+      <div class="stat tap" onclick="openEquipModal()"><div class="n" id="stEquip">0</div><div class="l">총 장비</div></div>
     </div>
 
     <div class="sec-head">
@@ -1574,6 +1616,123 @@ function buildSoloPptx(d, rows){
     .catch(() => alert('PPT 파일을 만들지 못했습니다.'));
 }
 
+/* ---------- 업체별 집계 (인원 · 장비) ---------- */
+function coSummary(works){
+  const sum = {};
+  works.forEach(w => {
+    const co = w.company;
+    if (!sum[co]) sum[co] = { works:0, people:0, eq:{}, eqTotal:0, eqPlan:{} };
+    const m = sum[co];
+    m.works++;
+    const n = parseInt(w.count, 10);
+    if (!isNaN(n)) m.people += n;
+
+    // 배치도에 찍은 장비 = 실제 대수
+    (w.marks || []).forEach(k => {
+      m.eq[k.eq] = (m.eq[k.eq] || 0) + 1;
+      m.eqTotal++;
+    });
+    // 선택했지만 배치하지 않은 장비
+    (w.equip || []).forEach(e => {
+      if (!(w.marks || []).some(k => k.eq === e)) m.eqPlan[e] = true;
+    });
+  });
+  return sum;
+}
+function eqLabel(eqMap){
+  const ks = Object.keys(eqMap || {});
+  if (!ks.length) return '';
+  return ks.map(k => eqIcon(k) + ' ' + esc(eqShort(k)) + ' ' + eqMap[k]).join(' · ');
+}
+
+/* 총 인원 상세 */
+function openPeopleModal(){
+  const works = dashPool();
+  const sum = coSummary(works);
+  const rows = COMPANIES.filter(c => sum[c.name] && sum[c.name].people);
+  const fl = document.getElementById('floorFilter').value;
+  let total = 0;
+  rows.forEach(c => total += sum[c.name].people);
+
+  document.getElementById('mTitle').textContent = '업체별 작업 인원';
+  document.getElementById('mSub').textContent =
+    curDate() + (fl ? ' · ' + fl : '') + ' · 총 ' + total + '명';
+  document.getElementById('mBody').innerHTML = rows.length
+    ? rows.map(c => {
+        const m = sum[c.name];
+        const pct = total ? Math.round(m.people / total * 100) : 0;
+        return '<div class="co-row">' +
+          '<div class="bar" style="background:'+c.color+'"></div>' +
+          '<div class="nm">'+c.name +
+            '<div class="eqline">작업 '+m.works+'건 · 전체의 '+pct+'%</div>' +
+          '</div>' +
+          '<div class="vals" style="font-size:15px; font-weight:800; color:var(--ink)">'+m.people+'명</div>' +
+        '</div>';
+      }).join('') +
+      '<div class="co-row" style="background:#F3ECE4">' +
+        '<div class="bar" style="background:#111"></div>' +
+        '<div class="nm">합 계</div>' +
+        '<div class="vals" style="font-size:15px; font-weight:800; color:var(--ink)">'+total+'명</div>' +
+      '</div>'
+    : '<div class="empty">인원이 입력된 작업이 없습니다.</div>';
+  document.getElementById('detailModal').classList.add('open');
+}
+
+/* 총 장비 상세 */
+function openEquipModal(){
+  const works = dashPool();
+  const sum = coSummary(works);
+  const rows = COMPANIES.filter(c => sum[c.name] &&
+    (sum[c.name].eqTotal || Object.keys(sum[c.name].eqPlan).length));
+  const fl = document.getElementById('floorFilter').value;
+
+  let total = 0;
+  const allEq = {};
+  rows.forEach(c => {
+    total += sum[c.name].eqTotal;
+    Object.keys(sum[c.name].eq).forEach(k =>
+      allEq[k] = (allEq[k] || 0) + sum[c.name].eq[k]);
+  });
+
+  document.getElementById('mTitle').textContent = '업체별 사용 장비';
+  document.getElementById('mSub').textContent =
+    curDate() + (fl ? ' · ' + fl : '') + ' · 총 ' + total + '대';
+
+  let html = '';
+  if (Object.keys(allEq).length){
+    html += '<div class="msec">장비 종류별 합계</div>' +
+      '<div class="eq-sum">' +
+      Object.keys(allEq).sort((a,b) => allEq[b]-allEq[a]).map(k =>
+        '<div class="eq-line"><span class="ei">'+eqIcon(k)+'</span>' +
+        '<span class="en">'+esc(k)+'</span>' +
+        '<span class="ec">'+allEq[k]+'대</span></div>').join('') +
+      '</div>';
+  }
+
+  html += '<div class="msec">업체별 상세</div>';
+  html += rows.length
+    ? rows.map(c => {
+        const m = sum[c.name];
+        const list = Object.keys(m.eq).map(k =>
+          '<div class="eq-line"><span class="ei">'+eqIcon(k)+'</span>' +
+          '<span class="en">'+esc(k)+'</span>' +
+          '<span class="ec">'+m.eq[k]+'대</span></div>').join('');
+        const plan = Object.keys(m.eqPlan);
+        return '<div class="eq-card" style="border-left-color:'+c.color+'">' +
+          '<div class="eh"><span class="ec-nm" style="color:'+c.color+'">'+c.name+'</span>' +
+          '<span class="ec-tot">'+m.eqTotal+'대</span></div>' +
+          (list || '<div class="eqline" style="padding:4px 0">배치된 장비 없음</div>') +
+          (plan.length
+            ? '<div class="eq-plan">배치 미지정: ' + plan.map(esc).join(', ') + '</div>'
+            : '') +
+        '</div>';
+      }).join('')
+    : '<div class="empty">등록된 장비가 없습니다.</div>';
+
+  document.getElementById('mBody').innerHTML = html;
+  document.getElementById('detailModal').classList.add('open');
+}
+
 /* ---------- 관리 탭 잠금 ---------- */
 const ADMIN_PW = "rkdalstn";
 let adminUnlocked = false;
@@ -2057,35 +2216,38 @@ function render(){
   });
 
   // 통계
-  let zones = 0, people = 0;
+  let zones = 0, people = 0, equipN = 0;
   works.forEach(w => {
     zones += (w.zones || []).length;
+    equipN += (w.marks || []).length;
     const n = parseInt(w.count, 10);
     if (!isNaN(n)) people += n;
   });
   document.getElementById('stWorks').textContent = works.length;
   document.getElementById('stZones').textContent = zones;
   document.getElementById('stPeople').textContent = people;
+  document.getElementById('stEquip').textContent = equipN;
 
   // 업체별 집계
-  const sum = {};
-  works.forEach(w => {
-    if (!sum[w.company]) sum[w.company] = { works:0, people:0 };
-    sum[w.company].works++;
-    const n = parseInt(w.count, 10);
-    if (!isNaN(n)) sum[w.company].people += n;
-  });
+  const sum = coSummary(works);
   const cs = document.getElementById('coSum');
   const rows = COMPANIES.filter(c => sum[c.name]);
   cs.innerHTML = rows.length
-    ? rows.map(c =>
-        '<div class="co-row" style="cursor:pointer" onclick="openCompanyModal(\''+c.name+'\', true)">' +
+    ? rows.map(c => {
+        const m = sum[c.name];
+        const eqTxt = eqLabel(m.eq);
+        return '<div class="co-row" style="cursor:pointer" onclick="openCompanyModal(\''+c.name+'\', true)">' +
           '<div class="bar" style="background:'+c.color+'"></div>' +
-          '<div class="nm">'+c.name+'</div>' +
-          '<div class="vals">작업 '+sum[c.name].works+'건'+
-            (sum[c.name].people ? ' · 인원 '+sum[c.name].people+'명' : '')+'</div>' +
+          '<div class="nm">'+c.name +
+            (eqTxt ? '<div class="eqline">'+eqTxt+'</div>' : '') +
+          '</div>' +
+          '<div class="vals">작업 '+m.works+'건' +
+            (m.people ? '<br>인원 '+m.people+'명' : '') +
+            (m.eqTotal ? '<br>장비 '+m.eqTotal+'대' : '') +
+          '</div>' +
           '<div style="color:var(--ink-soft); font-size:15px">›</div>' +
-        '</div>').join('')
+        '</div>';
+      }).join('')
     : '<div class="empty">이 날짜에 등록된 작업이 없습니다.</div>';
 
   // 목록 (층 필터 적용 안 함 — 전체 표시)

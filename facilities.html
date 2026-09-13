@@ -29,7 +29,10 @@
 
   /* 배치도 */
   .map-wrap{ position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); }
-  .map-wrap img{ width:100%; height:auto; display:block; }
+  .map-wrap img{
+    width:100%; height:auto; display:block;
+    -webkit-user-drag:none; user-select:none; pointer-events:none;
+  }
 
   .hot{
     position:absolute; padding:0; cursor:pointer;

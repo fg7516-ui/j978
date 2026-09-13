@@ -94,7 +94,11 @@
     border:1px solid var(--line); background:#000;
     touch-action:none; user-select:none;
   }
-  .map-wrap img{ width:100%; height:auto; display:block; }
+  .map-wrap img{
+    width:100%; height:auto; display:block;
+    -webkit-user-drag:none; user-select:none; -webkit-user-select:none;
+    pointer-events:none;
+  }
   .zone{ position:absolute; border:2.5px solid; border-radius:4px; }
   .zone .zlabel{
     position:absolute; top:2px; left:2px;
@@ -149,7 +153,10 @@
     background:#000;
   }
   .zoominner{ position:absolute; top:0; left:0; }
-  .zoominner img{ width:100%; height:100%; display:block; }
+  .zoominner img{
+    width:100%; height:100%; display:block;
+    -webkit-user-drag:none; user-select:none; pointer-events:none;
+  }
   .zoominner .zone{ pointer-events:none; }
   .zoominner .eqmark{ pointer-events:none; }
   .zone.sel{
@@ -1816,6 +1823,11 @@ function lockAdmin(){
   document.getElementById('adminLock').style.display = 'block';
   document.getElementById('adminBody').style.display = 'none';
 }
+
+/* 이미지 기본 드래그 동작 차단 (마우스로 구간을 그릴 수 있게) */
+document.addEventListener('dragstart', e => {
+  if (e.target && e.target.tagName === 'IMG') e.preventDefault();
+});
 
 /* ---------- 탭 ---------- */
 function go(v){

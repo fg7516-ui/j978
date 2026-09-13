@@ -293,29 +293,29 @@
   .shift-note.night{ background:#EDEBF5; border:1px solid #CFC9E8; color:#3B3268; }
 
   /* 고위험 작업 — 경광등 표시 */
+  /* 경광 효과 — 색은 업체 색(--rc)을 따름 */
   .zone.risk{
-    border-color:#DC2626 !important;
-    border-width:3px !important;
+    border-width:3.5px !important;
+    border-style:solid !important;
     animation:riskPulse 1.1s ease-in-out infinite;
   }
   @keyframes riskPulse{
-    0%,100%{ box-shadow:0 0 0 0 rgba(220,38,38,.75), 0 0 14px rgba(220,38,38,.5) inset; }
-    50%    { box-shadow:0 0 0 7px rgba(220,38,38,0), 0 0 4px rgba(220,38,38,.2) inset; }
+    0%,100%{ box-shadow:0 0 0 0 var(--rc-on), 0 0 12px var(--rc-mid) inset; }
+    50%    { box-shadow:0 0 0 8px var(--rc-off), 0 0 3px var(--rc-off) inset; }
   }
   .beacon{
     position:absolute; top:-11px; left:-11px;
     width:22px; height:22px; border-radius:50%;
-    background:radial-gradient(circle at 35% 32%, #FF8A8A 0%, #DC2626 62%, #8F1620 100%);
-    border:2px solid #fff;
-    box-shadow:0 0 10px rgba(220,38,38,.95);
+    background:var(--rc-solid);
+    border:2.5px solid #fff;
     display:flex; align-items:center; justify-content:center;
-    font-size:10px; color:#fff; font-weight:900;
+    font-size:11px; color:#fff; font-weight:900;
     animation:beaconGlow 1.1s ease-in-out infinite;
     z-index:3;
   }
   @keyframes beaconGlow{
-    0%,100%{ box-shadow:0 0 10px rgba(220,38,38,.95); transform:scale(1); }
-    50%    { box-shadow:0 0 20px rgba(220,38,38,1); transform:scale(1.16); }
+    0%,100%{ box-shadow:0 0 9px var(--rc-on); transform:scale(1); }
+    50%    { box-shadow:0 0 20px var(--rc-solid), 0 0 30px var(--rc-on); transform:scale(1.2); }
   }
   @media (prefers-reduced-motion: reduce){
     .zone.risk, .beacon{ animation:none; }
@@ -2209,6 +2209,18 @@ function persist(){
 }
 
 /* ---------- 업체 ---------- */
+function hexRgb(h){
+  h = String(h).replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+/* 고위험 구간에 쓸 업체 색 기반 변수 */
+function riskVars(hex){
+  const [r,g,b] = hexRgb(hex);
+  return '--rc-solid:'+hex+';'
+       + '--rc-on:rgba('+r+','+g+','+b+',.85);'
+       + '--rc-mid:rgba('+r+','+g+','+b+',.45);'
+       + '--rc-off:rgba('+r+','+g+','+b+',0);';
+}
 function coColor(name){
   const c = COMPANIES.find(x => x.name === name);
   return c ? c.color : '#666';
@@ -2652,14 +2664,15 @@ function render(){
   vm.querySelectorAll('.zone, .eqmark').forEach(el => el.remove());
   works.forEach(w => {
     (w.zones || []).forEach(z => {
+      const cc = coColor(w.company);
       const el = document.createElement('div');
       el.className = 'zone' + (w.risk ? ' risk' : '');
       el.style.cssText = 'left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-        + 'border-color:'+coColor(w.company)+'; background:'
-        + (w.risk ? 'rgba(220,38,38,.22)' : coColor(w.company)+'2E') + ';';
+        + 'border-color:'+cc+'; background:'+cc+(w.risk ? '3D' : '2E')+';'
+        + (w.risk ? riskVars(cc) : '');
       const lb = document.createElement('div');
       lb.className = 'zlabel';
-      lb.style.background = w.risk ? '#DC2626' : coColor(w.company);
+      lb.style.background = cc;
       lb.textContent = (w.risk ? '🚨 ' : '') + w.name;
       el.appendChild(lb);
       if (w.risk){
@@ -2798,12 +2811,12 @@ function miniMap(works, dot){
     (w.marks || []).filter(m => markKind(m) === 'eq')
       .forEach(m => { z += markHTML(m, null); });
     (w.zones || []).forEach(zz => {
-      const rk = w.risk;
+      const rk = w.risk, cc = coColor(w.company);
       z += '<div class="zone'+(rk?' risk':'')+'" style="left:'+zz.x+'%; top:'+zz.y+'%; width:'+zz.w+'%; height:'+zz.h+'%;'
-        + 'border-color:'+coColor(w.company)+'; background:'
-        + (rk ? 'rgba(220,38,38,.22)' : coColor(w.company)+'2E') + '; pointer-events:none;">'
+        + 'border-color:'+cc+'; background:'+cc+(rk?'3D':'2E')+'; pointer-events:none;'
+        + (rk ? riskVars(cc) : '') + '">'
         + (rk ? '<div class="beacon">!</div>' : '')
-        + '<div class="zlabel" style="background:'+(rk?'#DC2626':coColor(w.company))+'">'
+        + '<div class="zlabel" style="background:'+cc+'">'
         + (rk?'🚨 ':'') + esc(w.name)+'</div>'
         + '</div>';
     });
@@ -2841,7 +2854,7 @@ function workCardHTML(w){
   if (nEq)  meta.push('장비 ' + nEq + '대');
   if (nSig) meta.push('신호수 ' + nSig + '명 배치');
   if (nGui) meta.push('유도원 ' + nGui + '명 배치');
-  const bd = w.risk ? '#DC2626' : c;
+  const bd = c;
   return '<div class="work-item" style="border-left-color:'+bd+'; cursor:default">' +
     '<div class="wco" style="color:'+c+'">'+esc(w.company)+'</div>' +
     '<div class="wname">'+ (w.risk ? '🚨 ' : '') + esc(w.name)+'</div>' +
@@ -2871,12 +2884,12 @@ function zoomMap(r, works){
   works.forEach(w => {
     (w.marks || []).forEach(m => { inner += markHTML(m, null); });   // 확대 시 신호수·유도원까지
     (w.zones || []).forEach(z => {
-      const rk = w.risk;
+      const rk = w.risk, cc = coColor(w.company);
       inner += '<div class="zone'+(rk?' risk':'')+'" style="left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-        + 'border-color:'+coColor(w.company)+'; background:'
-        + (rk ? 'rgba(220,38,38,.22)' : coColor(w.company)+'2E') + ';">'
+        + 'border-color:'+cc+'; background:'+cc+(rk?'3D':'2E')+';'
+        + (rk ? riskVars(cc) : '') + '">'
         + (rk ? '<div class="beacon">!</div>' : '')
-        + '<div class="zlabel" style="background:'+(rk?'#DC2626':coColor(w.company))+'">'
+        + '<div class="zlabel" style="background:'+cc+'">'
         + (rk?'🚨 ':'') + esc(w.name)+'</div>'
         + '</div>';
     });
@@ -2949,26 +2962,81 @@ function openPointModal(px, py){
 }
 
 /* 범위 드래그 → 확대 */
-function openZoomModal(r){
-  const works = dashPool().filter(w =>
+function openZoomModal(r, onlyCo){
+  lastModal = { fn: openZoomModal, arg: r, arg2: onlyCo };
+
+  const all = dashPool().filter(w =>
     (w.zones || []).some(z =>
       z.x < r.x + r.w && z.x + z.w > r.x &&
       z.y < r.y + r.h && z.y + z.h > r.y));
 
+  const works = onlyCo ? all.filter(w => w.company === onlyCo) : all;
+
   const fl = document.getElementById('floorFilter').value;
   const zoom = (100 / Math.max(r.w, r.h)).toFixed(1);
 
-  document.getElementById('mTitle').textContent = '선택 범위 확대';
+  // 범위 안 업체별 집계
+  const byCo = {};
+  all.forEach(w => {
+    if (!byCo[w.company]) byCo[w.company] = { n:0, people:0, risk:0 };
+    const m = byCo[w.company];
+    m.n++;
+    if (w.risk) m.risk++;
+    const p = parseInt(w.count, 10);
+    if (!isNaN(p)) m.people += p;
+  });
+  const cos = COMPANIES.filter(x => byCo[x.name]);
+
+  // 제목
+  document.getElementById('mTitle').textContent =
+    onlyCo ? onlyCo + ' — 선택 범위' : '선택 범위 확대';
   document.getElementById('mSub').textContent =
-    curDate() + (fl ? ' · ' + fl : '') + ' · 약 ' + zoom + '배 · 포함 작업 ' + works.length + '건';
-  document.getElementById('mBody').innerHTML =
-    zoomMap(r, works) +
-    '<div class="msec">이 범위에 포함된 작업</div>' +
+    curDate() + (fl ? ' · ' + fl : '') + ' · 약 ' + zoom + '배 · ' +
+    (onlyCo ? onlyCo + ' ' + works.length + '건 / 전체 ' + all.length + '건'
+            : '포함 작업 ' + all.length + '건');
+
+  let html = '';
+
+  // 특정 업체만 보는 중이면 전체로 돌아가는 버튼
+  if (onlyCo){
+    html += '<button type="button" class="btn btn-ghost" style="width:100%; margin-bottom:12px"' +
+            ' onclick="openZoomModal(lastModal.arg, null)">← 이 범위 전체 보기</button>';
+  }
+
+  html += zoomMap(r, works);
+
+  // 업체별 선택
+  if (cos.length){
+    html += '<div class="msec">업체별로 보기</div>';
+    html += cos.map(x => {
+      const m = byCo[x.name];
+      const on = (onlyCo === x.name);
+      const bits = [m.n + '건'];
+      if (m.people) bits.push('인원 ' + m.people + '명');
+      if (m.risk) bits.push('🚨 고위험 ' + m.risk);
+      return '<div class="co-row" style="cursor:pointer' +
+        (on ? '; background:#F3ECE4; border-color:'+x.color : '') + '"' +
+        ' onclick="openZoomModal(lastModal.arg, ' + (on ? 'null' : "'"+x.name+"'") + ')">' +
+        '<div class="bar" style="background:'+x.color+'"></div>' +
+        '<div class="nm">'+x.name+
+          (on ? '<div class="eqline">지금 이 업체만 보는 중 · 눌러서 해제</div>' : '') +
+        '</div>' +
+        '<div class="vals">'+bits.join('<br>')+'</div>' +
+        '<div style="color:var(--ink-soft); font-size:15px">'+(on?'✕':'›')+'</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  html += '<div class="msec">' +
+    (onlyCo ? onlyCo + ' 작업' : '이 범위에 포함된 작업') + '</div>' +
     (works.length
       ? works.map(workCardHTML).join('')
       : '<div class="empty">이 범위에는 등록된 작업이 없습니다.</div>');
+
+  document.getElementById('mBody').innerHTML = html;
   document.getElementById('detailModal').classList.add('open');
 }
+
 
 /* 작업현황 항목 터치 → 해당 업체의 그날 작업 전체 + 구간 지도 */
 function openCompanyModal(company, useFloorFilter){

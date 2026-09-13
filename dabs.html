@@ -804,9 +804,9 @@
       </div>
 
       <div id="crewBox" style="display:none">
-        <div class="crew-head">🚜 장비 사용 시 배치 인원</div>
+        <div class="crew-head">🚜 장비 사용 시 배치 인원 <span style="font-weight:600">— 모두 입력해야 등록됩니다</span></div>
         <div class="field">
-          <label>운전원</label>
+          <label>운전원 *</label>
           <div class="two-col">
             <input type="text" id="fOpName" placeholder="이름">
             <input type="text" id="fOpPhone" inputmode="tel" placeholder="연락처">
@@ -814,11 +814,11 @@
         </div>
         <div class="two-col">
           <div class="field">
-            <label><span class="dotc sig"></span>신호수</label>
+            <label><span class="dotc sig"></span>신호수 *</label>
             <input type="text" id="fSigName" placeholder="이름">
           </div>
           <div class="field">
-            <label><span class="dotc gui"></span>유도원</label>
+            <label><span class="dotc gui"></span>유도원 *</label>
             <input type="text" id="fGuiName" placeholder="이름">
           </div>
         </div>
@@ -2233,7 +2233,7 @@ function buildLegend(){
 }
 
 /* ---------- 층 / 장비 칩 ---------- */
-function buildChips(listId, selId, items, selArr){
+function buildChips(listId, selId, items, selArr, after){
   const box = document.getElementById(listId);
   box.innerHTML = '';
   items.forEach(v => {
@@ -2244,7 +2244,8 @@ function buildChips(listId, selId, items, selArr){
     b.onclick = () => {
       const i = selArr.indexOf(v);
       if (i >= 0) selArr.splice(i,1); else selArr.push(v);
-      buildChips(listId, selId, items, selArr);
+      buildChips(listId, selId, items, selArr, after);
+      if (after) after();
     };
     box.appendChild(b);
   });
@@ -2253,7 +2254,10 @@ function buildChips(listId, selId, items, selArr){
 }
 function buildFloorChips(){ buildChips('flChips','flSel', FLOORS, selFloors); }
 function buildEquipChips(){
-  buildChips('eqChips','eqSel', EQUIPMENT, selEquip);
+  buildChips('eqChips','eqSel', EQUIPMENT, selEquip, () => {
+    buildArmList();
+    updateCrewVisible();
+  });
   buildArmList();
   updateCrewVisible();
 }
@@ -2474,6 +2478,16 @@ function saveWork(){
 
   const leadName = document.getElementById('fLeadName').value.trim();
   if (!leadName){ alert('작업지휘자 이름을 입력해 주세요.'); return; }
+
+  // 장비를 사용하면 배치 인원 필수
+  if (selEquip.length){
+    const opName  = document.getElementById('fOpName').value.trim();
+    const sigName = document.getElementById('fSigName').value.trim();
+    const guiName = document.getElementById('fGuiName').value.trim();
+    if (!opName){  alert('장비를 사용하는 작업은 운전원 이름을 입력해야 합니다.'); return; }
+    if (!sigName){ alert('장비를 사용하는 작업은 신호수 이름을 입력해야 합니다.'); return; }
+    if (!guiName){ alert('장비를 사용하는 작업은 유도원 이름을 입력해야 합니다.\n배치가 없으면 "해당없음"으로 적어 주세요.'); return; }
+  }
 
   const data = {
     company: selectedCo,

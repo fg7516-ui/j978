@@ -262,6 +262,28 @@
   }
   .tag.fl{ background:#E7EFEA; color:#146640; }
 
+  /* 작업 시간 */
+  .time-row{ display:flex; align-items:center; gap:8px; }
+  .time-row select{ flex:1; }
+  .time-row .tsep{ font-size:15px; font-weight:800; color:var(--ink-soft); }
+  .time-note{ margin-top:8px; font-size:11.5px; color:var(--ink-soft); }
+
+  .tag.tm{ background:#EEF1F3; color:#3A4750; }
+  .tag.early{ background:#1F8A56; color:#fff; }
+  .tag.night{ background:#3B3268; color:#fff; }
+
+  .shift-bar{
+    display:flex; gap:8px; margin-bottom:14px;
+  }
+  .shift-pill{
+    flex:1; border-radius:12px; padding:11px 13px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .shift-pill .nm{ font-size:12.5px; font-weight:800; }
+  .shift-pill .ct{ font-size:14px; font-weight:800; }
+  .shift-pill.early{ background:#E6F4EC; border:1px solid #BFE3CE; color:#146640; }
+  .shift-pill.night{ background:#EDEBF5; border:1px solid #CFC9E8; color:#3B3268; }
+
   /* 수정 모드 배너 */
   .edit-banner{
     display:none;
@@ -595,6 +617,8 @@
       <div class="stat tap" onclick="openEquipModal()"><div class="n" id="stEquip">0</div><div class="l">총 장비</div></div>
     </div>
 
+    <div class="shift-bar" id="shiftBar" style="display:none"></div>
+
     <div class="sec-head">
       <h2>작업구간 현황</h2>
       <select class="floor-filter" id="floorFilter" onchange="render()">
@@ -673,6 +697,15 @@
         <label>사용 장비 (여러 개 선택 가능)</label>
         <div class="chips" id="eqChips"></div>
         <div class="chips-sel" id="eqSel">선택: 없음</div>
+      </div>
+      <div class="field">
+        <label>작업 시간</label>
+        <div class="time-row">
+          <select id="fStart" onchange="updateTimePreview()"></select>
+          <span class="tsep">~</span>
+          <select id="fEnd" onchange="updateTimePreview()"></select>
+        </div>
+        <div class="time-note" id="timeNote"></div>
       </div>
       <div class="field">
         <label>작업 인원 (명)</label>
@@ -1685,6 +1718,49 @@ function buildSoloPptx(d, rows){
     .catch(() => alert('PPT 파일을 만들지 못했습니다.'));
 }
 
+/* ---------- 작업 시간 ---------- */
+const WORK_START = 7;    // 일반 작업 시작
+const WORK_END   = 18;   // 일반 작업 종료
+
+function buildHourOptions(){
+  let html = '';
+  for (let h = 0; h < 24; h++){
+    const v = String(h).padStart(2,'0');
+    html += '<option value="'+v+'">'+v+':00</option>';
+  }
+  document.getElementById('fStart').innerHTML = html;
+  document.getElementById('fEnd').innerHTML = html;
+  document.getElementById('fStart').value = '07';
+  document.getElementById('fEnd').value = '18';
+}
+function isEarly(w){
+  const s = parseInt(w.start, 10);
+  return !isNaN(s) && s < WORK_START;
+}
+function isNight(w){
+  const e = parseInt(w.end, 10);
+  const s = parseInt(w.start, 10);
+  if (isNaN(e)) return false;
+  if (e > WORK_END) return true;
+  return !isNaN(s) && e <= s;     // 자정을 넘기는 경우
+}
+function timeText(w){
+  if (!w.start || !w.end) return '';
+  return w.start + ':00 ~ ' + w.end + ':00';
+}
+function updateTimePreview(){
+  const w = {
+    start: document.getElementById('fStart').value,
+    end:   document.getElementById('fEnd').value
+  };
+  const marks = [];
+  if (isEarly(w)) marks.push('<span class="tag early">조출</span>');
+  if (isNight(w)) marks.push('<span class="tag night">야간</span>');
+  document.getElementById('timeNote').innerHTML = marks.length
+    ? marks.join(' ') + ' <span style="margin-left:4px">일반 작업시간(07~18시)을 벗어납니다</span>'
+    : '일반 작업시간(07~18시) 이내입니다';
+}
+
 /* ---------- 업체별 집계 (인원 · 장비) ---------- */
 function coSummary(works){
   const sum = {};
@@ -2087,6 +2163,9 @@ function fillForm(w){
   document.getElementById('fName').value = w.name || '';
   document.getElementById('fDetail').value = w.detail || '';
   document.getElementById('fCount').value = w.count || '';
+  document.getElementById('fStart').value = w.start || '07';
+  document.getElementById('fEnd').value = w.end || '18';
+  updateTimePreview();
   selFloors = (w.floors || []).slice();
   selEquip  = (w.equip  || []).slice();
   draftZones = (w.zones || []).map(z => ({x:z.x, y:z.y, w:z.w, h:z.h}));
@@ -2100,6 +2179,9 @@ function resetForm(){
   document.getElementById('fName').value = '';
   document.getElementById('fDetail').value = '';
   document.getElementById('fCount').value = '';
+  document.getElementById('fStart').value = '07';
+  document.getElementById('fEnd').value = '18';
+  updateTimePreview();
   selFloors = []; selEquip = []; draftZones = []; draftMarks = [];
   buildFloorChips(); buildEquipChips(); drawDraft();
   setMode('zone');
@@ -2137,6 +2219,8 @@ function saveWork(){
     name: name,
     detail: document.getElementById('fDetail').value.trim(),
     count: document.getElementById('fCount').value.trim(),
+    start: document.getElementById('fStart').value,
+    end: document.getElementById('fEnd').value,
     floors: selFloors.slice(),
     equip: selEquip.slice(),
     zones: draftZones.slice(),
@@ -2237,6 +2321,12 @@ function exportDay(){
   let txt = '[DABs - 고위험작업 현황] ' + d + '\n더현대광주 신축공사\n\n';
   works.forEach((w,i) => {
     txt += (i+1) + '. ' + w.company + ' — ' + w.name + '\n';
+    if (w.start && w.end){
+      txt += '   시간: ' + timeText(w);
+      if (isEarly(w)) txt += ' [조출]';
+      if (isNight(w)) txt += ' [야간]';
+      txt += '\n';
+    }
     if ((w.floors || []).length) txt += '   층: ' + w.floors.join(', ') + '\n';
     if (w.count) txt += '   인원: ' + w.count + '명\n';
     if ((w.equip || []).length) txt += '   장비: ' + w.equip.join(', ') + '\n';
@@ -2302,6 +2392,25 @@ function render(){
   document.getElementById('stPeople').textContent = people;
   document.getElementById('stEquip').textContent = equipN;
 
+  // 조출 · 야간 현황
+  const early = works.filter(isEarly);
+  const night = works.filter(isNight);
+  const sb = document.getElementById('shiftBar');
+  if (early.length || night.length){
+    sb.style.display = 'flex';
+    let h = '';
+    if (early.length)
+      h += '<div class="shift-pill early"><span class="nm">🌅 조출 작업</span>' +
+           '<span class="ct">' + early.length + '건</span></div>';
+    if (night.length)
+      h += '<div class="shift-pill night"><span class="nm">🌙 야간 작업</span>' +
+           '<span class="ct">' + night.length + '건</span></div>';
+    sb.innerHTML = h;
+  } else {
+    sb.style.display = 'none';
+    sb.innerHTML = '';
+  }
+
   // 업체별 집계
   const sum = coSummary(works);
   const cs = document.getElementById('coSum');
@@ -2354,9 +2463,15 @@ function render(){
 
 /* 층 / 장비 태그 줄 */
 function tagRow(w){
+  let tm = '';
+  if (w.start && w.end){
+    tm += '<span class="tag tm">' + esc(timeText(w)) + '</span>';
+    if (isEarly(w)) tm += '<span class="tag early">조출</span>';
+    if (isNight(w)) tm += '<span class="tag night">야간</span>';
+  }
   const fl = (w.floors || []).map(f => '<span class="tag fl">'+esc(f)+'</span>').join('');
   const eq = (w.equip  || []).map(e => '<span class="tag">'+esc(e)+'</span>').join('');
-  return (fl || eq) ? '<div class="tag-row">' + fl + eq + '</div>' : '';
+  return (tm || fl || eq) ? '<div class="tag-row">' + tm + fl + eq + '</div>' : '';
 }
 function esc(s){
   return String(s||'').replace(/[&<>"']/g, m =>
@@ -2597,6 +2712,8 @@ buildFloorChips();
 buildEquipChips();
 buildFloorFilter();
 buildTimeOptions();
+buildHourOptions();
+updateTimePreview();
 buildMatCoSelects();
 buildSoloCoSelect();
 drawDraft();

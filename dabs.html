@@ -289,6 +289,31 @@
   .tag.tm{ background:#EEF1F3; color:#3A4750; }
   .tag.early{ background:#1F8A56; color:#fff; }
   .tag.night{ background:#3B3268; color:#fff; }
+  .tag.lunch{ background:#B45309; color:#fff; }
+
+  /* 체크박스 */
+  .chk-box{
+    display:flex; align-items:center; gap:11px;
+    background:#FFFDFB; border:1.5px solid var(--line);
+    border-radius:12px; padding:12px 14px; cursor:pointer;
+  }
+  .chk-box.on{ background:#FEF3E2; border-color:#E3B06A; }
+  .chk-box .bx{
+    width:22px; height:22px; border-radius:6px; flex:0 0 auto;
+    border:2px solid #CFC6BC; background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; color:#B45309;
+  }
+  .chk-box.on .bx{ border-color:#B45309; }
+  .chk-box .lb{ font-size:13.5px; font-weight:800; color:var(--ink); }
+  .chk-box .lb .sub{
+    display:block; font-weight:500; font-size:11px;
+    color:var(--ink-soft); margin-top:2px;
+  }
+  .chk-box.on .lb .sub{ color:#9A5B10; }
+
+  .shift-pill.lunch{ background:#FEF3E2; border:1px solid #E3B06A; color:#8A4A08; cursor:pointer; }
+  .shift-note.lunch{ background:#FEF3E2; border:1px solid #E3B06A; color:#8A4A08; }
 
   .shift-bar{
     display:flex; gap:8px; margin-bottom:14px;
@@ -864,6 +889,14 @@
           <select id="fEnd" onchange="updateTimePreview()"></select>
         </div>
         <div class="time-note" id="timeNote"></div>
+      </div>
+      <div class="field">
+        <div class="chk-box" id="lunchBox" onclick="toggleLunch()">
+          <div class="bx" id="lunchBx"></div>
+          <div class="lb">🍱 점심시간 작업
+            <span class="sub">점심시간(12~13시)에도 작업이 이어집니다</span>
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>작업지휘자 *</label>
@@ -1954,6 +1987,17 @@ function timeText(w){
   if (!w.start || !w.end) return '';
   return w.start + ':00 ~ ' + w.end + ':00';
 }
+let lunchWork = false;
+function toggleLunch(){
+  lunchWork = !lunchWork;
+  setLunch(lunchWork);
+}
+function setLunch(v){
+  lunchWork = !!v;
+  document.getElementById('lunchBox').classList.toggle('on', lunchWork);
+  document.getElementById('lunchBx').textContent = lunchWork ? '✓' : '';
+}
+
 function updateTimePreview(){
   const w = {
     start: document.getElementById('fStart').value,
@@ -2146,8 +2190,9 @@ function openRiskModal(){
 /* 조출 · 야간 작업 상세 */
 function openShiftModal(kind){
   lastModal = { fn: openShiftModal, arg: kind };
-  const isE = (kind === 'early');
-  const works = dashPool().filter(isE ? isEarly : isNight);
+  const isE = (kind === 'early'), isL = (kind === 'lunch');
+  const works = dashPool().filter(
+    isE ? isEarly : (isL ? (w => !!w.lunch) : isNight));
   if (!works.length) return;
 
   // 시작 시간 순으로 정렬
@@ -2172,15 +2217,17 @@ function openShiftModal(kind){
     '</div>').join('');
 
   document.getElementById('mTitle').textContent =
-    isE ? '🌅 조출 작업' : '🌙 야간 작업';
+    isE ? '🌅 조출 작업' : (isL ? '🍱 점심시간 작업' : '🌙 야간 작업');
   document.getElementById('mSub').textContent =
     curDate() + (fl ? ' · ' + fl : '') + ' · ' + works.length + '건' +
     (people ? ' · 인원 ' + people + '명' : '');
 
   document.getElementById('mBody').innerHTML =
-    '<div class="shift-note ' + (isE ? 'early' : 'night') + '">' +
+    '<div class="shift-note ' + (isE ? 'early' : (isL ? 'lunch' : 'night')) + '">' +
       (isE
         ? '일반 작업시작(07시) 이전에 시작하는 작업입니다. 출근 동선과 조명 상태를 확인하세요.'
+        : isL
+        ? '점심시간(12~13시)에도 이어지는 작업입니다. 교대 인원과 관리감독자 입회 여부를 확인하세요.'
         : '일반 작업종료(18시) 이후까지 이어지는 작업입니다. 조명·신호수 배치와 퇴근 동선을 확인하세요.') +
     '</div>' +
     '<div class="msec">작업구간</div>' +
@@ -2715,6 +2762,7 @@ function fillForm(w){
   } else {
     eqUnits = [];
   }
+  setLunch(!!w.lunch);
   document.getElementById('fStart').value = w.start || '07';
   document.getElementById('fEnd').value = w.end || '18';
   updateTimePreview();
@@ -2739,6 +2787,7 @@ function resetForm(){
   buildEqUnits();
   document.getElementById('fStart').value = '07';
   document.getElementById('fEnd').value = '18';
+  setLunch(false);
   updateTimePreview();
   selFloors = []; selEquip = []; draftZones = []; draftMarks = [];
   buildFloorChips(); buildEquipChips(); drawDraft();
@@ -2820,6 +2869,7 @@ function saveWork(){
     count: document.getElementById('fCount').value.trim(),
     start: document.getElementById('fStart').value,
     end: document.getElementById('fEnd').value,
+    lunch: lunchWork,
     floors: selFloors.slice(),
     equip: selEquip.slice(),
     zones: draftZones.slice(),
@@ -2924,6 +2974,7 @@ function exportDay(){
       txt += '   시간: ' + timeText(w);
       if (isEarly(w)) txt += ' [조출]';
       if (isNight(w)) txt += ' [야간]';
+      if (w.lunch) txt += ' [점심작업]';
       txt += '\n';
     }
     if ((w.floors || []).length) txt += '   층: ' + w.floors.join(', ') + '\n';
@@ -3024,8 +3075,9 @@ function render(){
   const early = works.filter(isEarly);
   const night = works.filter(isNight);
   const risky = works.filter(w => w.risk);
+  const lunch = works.filter(w => w.lunch);
   const sb = document.getElementById('shiftBar');
-  if (early.length || night.length || risky.length){
+  if (early.length || night.length || risky.length || lunch.length){
     sb.style.display = 'flex';
     let h = '';
     if (risky.length)
@@ -3040,6 +3092,10 @@ function render(){
       h += '<div class="shift-pill night" onclick="openShiftModal(\'night\')">' +
            '<span class="nm">🌙 야간 작업</span>' +
            '<span class="ct">' + night.length + '건 ›</span></div>';
+    if (lunch.length)
+      h += '<div class="shift-pill lunch" onclick="openShiftModal(\'lunch\')">' +
+           '<span class="nm">🍱 점심시간 작업</span>' +
+           '<span class="ct">' + lunch.length + '건 ›</span></div>';
     sb.innerHTML = h;
   } else {
     sb.style.display = 'none';
@@ -3105,6 +3161,7 @@ function tagRow(w){
     if (isEarly(w)) tm += '<span class="tag early">조출</span>';
     if (isNight(w)) tm += '<span class="tag night">야간</span>';
   }
+  if (w.lunch) tm += '<span class="tag lunch">🍱 점심작업</span>';
   const fl = (w.floors || []).map(f => '<span class="tag fl">'+esc(f)+'</span>').join('');
   const eq = (w.equip  || []).map(e => '<span class="tag">'+esc(e)+'</span>').join('');
   return (tm || fl || eq) ? '<div class="tag-row">' + tm + fl + eq + '</div>' : '';

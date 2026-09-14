@@ -208,6 +208,16 @@
     box-shadow:0 0 0 1.5px rgba(0,0,0,.5) inset;
   }
 
+  /* 자유형 구간 */
+  .zone.poly{ border:none !important; background:transparent !important; }
+  .zsvg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  .free-live{
+    position:absolute; left:0; top:0; width:100%; height:100%;
+    pointer-events:none; overflow:visible;
+  }
+  .mode-row{ flex-wrap:wrap; }
+  .mode-row button{ min-width:calc(50% - 4px); }
+
   .map-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
   .map-tools .count{ font-size:12.5px; color:var(--ink-soft); flex:1; }
   .btn{
@@ -316,14 +326,19 @@
   .shift-note.lunch{ background:#FEF3E2; border:1px solid #E3B06A; color:#8A4A08; }
 
   .shift-bar{
-    display:flex; gap:8px; margin-bottom:14px;
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:8px; margin-bottom:14px;
   }
   .shift-pill{
-    flex:1; border-radius:12px; padding:11px 13px;
-    display:flex; align-items:center; justify-content:space-between;
+    border-radius:12px; padding:11px 13px;
+    display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+    min-width:0;
   }
-  .shift-pill .nm{ font-size:12.5px; font-weight:800; }
-  .shift-pill .ct{ font-size:14px; font-weight:800; }
+  .shift-pill .nm{
+    font-size:12px; font-weight:800; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; max-width:100%;
+  }
+  .shift-pill .ct{ font-size:15px; font-weight:800; white-space:nowrap; }
   .shift-pill.early{ background:#E6F4EC; border:1px solid #BFE3CE; color:#146640; cursor:pointer; }
   .shift-pill.night{ background:#EDEBF5; border:1px solid #CFC9E8; color:#3B3268; cursor:pointer; }
   .shift-pill:active{ filter:brightness(.96); }
@@ -831,10 +846,11 @@
     </div>
 
     <h2>작업구간 지정 <span id="addDateTag" style="font-size:12px; font-weight:700; color:var(--accent)"></span></h2>
-    <p class="hint">구간을 그리거나, 선택한 장비를 배치도에 찍을 수 있어요.</p>
+    <p class="hint">사각형으로 끌거나 자유롭게 그려서 구간을 지정하고, 선택한 장비를 배치도에 찍을 수 있어요.</p>
 
     <div class="mode-row">
-      <button type="button" class="on" id="modeZone" onclick="setMode('zone')">✏️ 구간 그리기</button>
+      <button type="button" class="on" id="modeZone" onclick="setMode('zone')">⬛ 사각형 구간</button>
+      <button type="button" id="modeFree" onclick="setMode('free')">✏️ 자유롭게 그리기</button>
       <button type="button" id="modeEq" onclick="setMode('eq')">🚜 장비 배치</button>
       <button type="button" id="modeZoom" onclick="setMode('zoom')">🔍 확대해서 보기</button>
     </div>
@@ -1299,7 +1315,8 @@ function eqShort(n){
   return n.replace(/\(.*\)/, '').trim();
 }
 
-let drawMode = 'zone';   // 'zone' | 'eq'
+let drawMode = 'zone';   // 'zone' | 'free' | 'eq' | 'zoom'
+let freePts = [];
 let armedEq = null;
 let draftMarks = [];     // [{eq, x, y}]
 
@@ -2011,6 +2028,67 @@ function updateTimePreview(){
     : '일반 작업시간(07~18시) 이내입니다';
 }
 
+/* ---------- 작업구간 도형 (사각형 / 자유형) ---------- */
+function zoneBox(z){
+  if (z && z.pts && z.pts.length){
+    const xs = z.pts.map(p => p.x), ys = z.pts.map(p => p.y);
+    const x = Math.min.apply(null, xs), y = Math.min.apply(null, ys);
+    return { x:x, y:y, w:Math.max.apply(null, xs) - x, h:Math.max.apply(null, ys) - y };
+  }
+  return { x:z.x, y:z.y, w:z.w, h:z.h };
+}
+function pointInZone(px, py, z){
+  const b = zoneBox(z);
+  if (px < b.x || px > b.x + b.w || py < b.y || py > b.y + b.h) return false;
+  if (!z.pts || z.pts.length < 3) return true;
+  let inside = false;
+  for (let i = 0, j = z.pts.length - 1; i < z.pts.length; j = i++){
+    const xi = z.pts[i].x, yi = z.pts[i].y, xj = z.pts[j].x, yj = z.pts[j].y;
+    if (((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / ((yj - yi) || 1e-9) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function zoneHits(z, r){   // 선택 범위와 겹치는지
+  const b = zoneBox(z);
+  return b.x < r.x + r.w && b.x + b.w > r.x && b.y < r.y + r.h && b.y + b.h > r.y;
+}
+/* 구간 한 개를 그리는 HTML */
+function zoneHTML(z, color, o){
+  o = o || {};
+  const b = zoneBox(z);
+  const rk = !!o.risk;
+  const bg = rk ? 'rgba(220,38,38,0)' : '';   // 폴리곤은 SVG 가 칠함
+  let cls = 'zone' + (rk ? ' risk' : '') + (z.pts ? ' poly' : '');
+  let style = 'left:'+b.x+'%; top:'+b.y+'%; width:'+b.w+'%; height:'+b.h+'%;';
+  let inner = '';
+
+  if (z.pts && b.w > 0 && b.h > 0){
+    const pts = z.pts.map(p =>
+      (((p.x - b.x) / b.w * 100).toFixed(2) + ',' + ((p.y - b.y) / b.h * 100).toFixed(2))
+    ).join(' ');
+    inner += '<svg class="zsvg" viewBox="0 0 100 100" preserveAspectRatio="none">' +
+      '<polygon points="'+pts+'" fill="'+color+(rk ? '3D' : '2E')+'" ' +
+      'stroke="'+color+'" stroke-width="'+(rk ? 3.5 : 2.5)+'" ' +
+      'stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  } else {
+    style += 'border-color:'+color+'; background:'+color+(rk ? '3D' : '2E')+';';
+  }
+  if (rk) style += riskVars(color);
+  if (o.pointerNone) style += 'pointer-events:none;';
+
+  if (rk) inner += '<div class="beacon">!</div>';
+  if (o.label)
+    inner += '<div class="zlabel" style="background:'+color+'">' +
+             (rk ? '🚨 ' : '') + esc(o.label) + '</div>';
+  if (o.del !== undefined && o.del !== null)
+    inner += '<button type="button" class="zdel" ' +
+             'onclick="event.stopPropagation(); rmZone('+o.del+')">×</button>';
+
+  return '<div class="'+cls+'" style="'+style+'">' + inner + '</div>';
+}
+function rmZone(i){ draftZones.splice(i,1); drawDraft(); }
+
 /* ---------- 업체별 집계 (인원 · 장비) ---------- */
 function coSummary(works){
   const sum = {};
@@ -2544,6 +2622,7 @@ function buildEqUnits(){
 function setMode(m){
   drawMode = m;
   document.getElementById('modeZone').classList.toggle('on', m === 'zone');
+  document.getElementById('modeFree').classList.toggle('on', m === 'free');
   document.getElementById('modeEq').classList.toggle('on', m === 'eq');
   document.getElementById('modeZoom').classList.toggle('on', m === 'zoom');
   document.getElementById('eqPick').style.display = (m === 'eq') ? 'block' : 'none';
@@ -2640,6 +2719,23 @@ function pctPos(e){
 drawMap.addEventListener('pointerdown', e => {
   if (e.target.classList.contains('zdel') || e.target.classList.contains('mdel')) return;
 
+  // 자유롭게 그리기
+  if (drawMode === 'free'){
+    dragging = true;
+    drawMap.setPointerCapture(e.pointerId);
+    const p = pctPos(e);
+    freePts = [p];
+    liveEl = document.createElement('div');
+    liveEl.className = 'free-live';
+    liveEl.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" ' +
+      'style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">' +
+      '<polyline id="freeLine" points="" fill="'+coColor(selectedCo)+'33" ' +
+      'stroke="'+coColor(selectedCo)+'" stroke-width="2.5" stroke-linejoin="round" ' +
+      'stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>';
+    document.getElementById('drawInner').appendChild(liveEl);
+    return;
+  }
+
   // 확대 모드 — 드래그한 범위로 확대
   if (drawMode === 'zoom'){
     dragging = true;
@@ -2675,6 +2771,19 @@ drawMap.addEventListener('pointerdown', e => {
 });
 drawMap.addEventListener('pointermove', e => {
   if (!dragging || !liveEl) return;
+
+  if (drawMode === 'free'){
+    const p = pctPos(e);
+    const last = freePts[freePts.length - 1];
+    if (!last || Math.abs(p.x - last.x) + Math.abs(p.y - last.y) > 0.5){
+      freePts.push(p);
+      const line = liveEl.querySelector('#freeLine');
+      if (line) line.setAttribute('points',
+        freePts.map(q => q.x.toFixed(2) + ',' + q.y.toFixed(2)).join(' '));
+    }
+    return;
+  }
+
   const p = pctPos(e);
   liveEl.style.left = Math.min(startX,p.x)+'%';
   liveEl.style.top = Math.min(startY,p.y)+'%';
@@ -2688,6 +2797,16 @@ drawMap.addEventListener('pointerup', e => {
   const x = Math.min(startX,p.x), y = Math.min(startY,p.y);
   const w = Math.abs(p.x-startX), h = Math.abs(p.y-startY);
   if (liveEl){ liveEl.remove(); liveEl = null; }
+
+  if (drawMode === 'free'){
+    const box = freePts.length ? zoneBox({pts:freePts}) : null;
+    if (freePts.length >= 3 && box && box.w > 1.5 && box.h > 1.5){
+      draftZones.push({ pts: freePts.slice() });
+    }
+    freePts = [];
+    drawDraft();
+    return;
+  }
 
   if (drawMode === 'zoom'){
     if (w > 2 && h > 2){
@@ -2706,17 +2825,12 @@ drawMap.addEventListener('pointerup', e => {
 function drawDraft(){
   const inner = document.getElementById('drawInner');
   inner.querySelectorAll('.zone, .eqmark').forEach(el => el.remove());
-  draftZones.forEach((z,i) => {
-    const el = document.createElement('div');
-    el.className = 'zone';
-    el.style.cssText = 'left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-      + 'border-color:'+coColor(selectedCo)+'; background:'+coColor(selectedCo)+'33;';
-    const del = document.createElement('button');
-    del.type='button'; del.className='zdel'; del.textContent='×';
-    del.onclick = ev => { ev.stopPropagation(); draftZones.splice(i,1); drawDraft(); };
-    el.appendChild(del);
-    inner.appendChild(el);
-  });
+  if (draftZones.length){
+    const hz = document.createElement('div');
+    hz.innerHTML = draftZones
+      .map((z,i) => zoneHTML(z, coColor(selectedCo), { del:i })).join('');
+    while (hz.firstChild) inner.appendChild(hz.firstChild);
+  }
 
   if (draftMarks.length){
     const holder = document.createElement('div');
@@ -2768,7 +2882,10 @@ function fillForm(w){
   updateTimePreview();
   selFloors = (w.floors || []).slice();
   selEquip  = (w.equip  || []).slice();
-  draftZones = (w.zones || []).map(z => ({x:z.x, y:z.y, w:z.w, h:z.h}));
+  draftZones = (w.zones || []).map(z =>
+    (z.pts && z.pts.length)
+      ? { pts: z.pts.map(p => ({x:p.x, y:p.y})) }
+      : { x:z.x, y:z.y, w:z.w, h:z.h });
   draftMarks = (w.marks || [])
     .filter(m => m && typeof m.x === 'number')
     .map(m => {
@@ -3069,23 +3186,9 @@ function render(){
   works.forEach(w => {
     (w.zones || []).forEach(z => {
       const cc = coColor(w.company);
-      const el = document.createElement('div');
-      el.className = 'zone' + (w.risk ? ' risk' : '');
-      el.style.cssText = 'left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-        + 'border-color:'+cc+'; background:'+cc+(w.risk ? '3D' : '2E')+';'
-        + (w.risk ? riskVars(cc) : '');
-      const lb = document.createElement('div');
-      lb.className = 'zlabel';
-      lb.style.background = cc;
-      lb.textContent = (w.risk ? '🚨 ' : '') + w.name;
-      el.appendChild(lb);
-      if (w.risk){
-        const bc = document.createElement('div');
-        bc.className = 'beacon';
-        bc.textContent = '!';
-        el.appendChild(bc);
-      }
-      vm.appendChild(el);
+      const hz = document.createElement('div');
+      hz.innerHTML = zoneHTML(z, cc, { risk:w.risk, label:w.name });
+      while (hz.firstChild) vm.appendChild(hz.firstChild);
     });
     // 대시보드 지도에는 장비만 표시 (신호수·유도원은 확대 시에만)
     const eqOnly = (w.marks || []).filter(m => markKind(m) === 'eq');
@@ -3224,14 +3327,8 @@ function miniMap(works, dot){
     (w.marks || []).filter(m => markKind(m) === 'eq')
       .forEach(m => { z += markHTML(m, null); });
     (w.zones || []).forEach(zz => {
-      const rk = w.risk, cc = coColor(w.company);
-      z += '<div class="zone'+(rk?' risk':'')+'" style="left:'+zz.x+'%; top:'+zz.y+'%; width:'+zz.w+'%; height:'+zz.h+'%;'
-        + 'border-color:'+cc+'; background:'+cc+(rk?'3D':'2E')+'; pointer-events:none;'
-        + (rk ? riskVars(cc) : '') + '">'
-        + (rk ? '<div class="beacon">!</div>' : '')
-        + '<div class="zlabel" style="background:'+cc+'">'
-        + (rk?'🚨 ':'') + esc(w.name)+'</div>'
-        + '</div>';
+      z += zoneHTML(zz, coColor(w.company),
+             { risk:w.risk, label:w.name, pointerNone:true });
     });
   });
   if (dot) z += '<div class="tapdot" style="left:'+dot.x+'%; top:'+dot.y+'%;"></div>';
@@ -3323,14 +3420,7 @@ function zoomMap(r, works){
   works.forEach(w => {
     (w.marks || []).forEach(m => { inner += markHTML(m, null); });   // 확대 시 신호수·유도원까지
     (w.zones || []).forEach(z => {
-      const rk = w.risk, cc = coColor(w.company);
-      inner += '<div class="zone'+(rk?' risk':'')+'" style="left:'+z.x+'%; top:'+z.y+'%; width:'+z.w+'%; height:'+z.h+'%;'
-        + 'border-color:'+cc+'; background:'+cc+(rk?'3D':'2E')+';'
-        + (rk ? riskVars(cc) : '') + '">'
-        + (rk ? '<div class="beacon">!</div>' : '')
-        + '<div class="zlabel" style="background:'+cc+'">'
-        + (rk?'🚨 ':'') + esc(w.name)+'</div>'
-        + '</div>';
+      inner += zoneHTML(z, coColor(w.company), { risk:w.risk, label:w.name });
     });
   });
   return '<div class="zoombox" style="padding-bottom:'+pad.toFixed(2)+'%">' +
@@ -3384,8 +3474,7 @@ viewMap.addEventListener('pointerup', e => {
 function openPointModal(px, py){
   lastModal = { fn: openPointModal, arg: px, arg2: py };
   const works = dashPool().filter(w =>
-    (w.zones || []).some(z =>
-      px >= z.x && px <= z.x + z.w && py >= z.y && py <= z.y + z.h));
+    (w.zones || []).some(z => pointInZone(px, py, z)));
   if (!works.length) return;
 
   const fl = document.getElementById('floorFilter').value;
@@ -3405,9 +3494,7 @@ function openZoomModal(r, onlyCo){
   lastModal = { fn: openZoomModal, arg: r, arg2: onlyCo };
 
   const all = dashPool().filter(w =>
-    (w.zones || []).some(z =>
-      z.x < r.x + r.w && z.x + z.w > r.x &&
-      z.y < r.y + r.h && z.y + z.h > r.y));
+    (w.zones || []).some(z => zoneHits(z, r)));
 
   const works = onlyCo ? all.filter(w => w.company === onlyCo) : all;
 

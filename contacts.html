@@ -136,11 +136,14 @@
     padding:10px 12px;
     display:flex; justify-content:space-between; align-items:center;
   }
-  .partner-row .who .pos{ font-size:11px; color:var(--ink-soft); }
-  .partner-row .who .nm{ font-size:13.5px; font-weight:700; }
+  .partner-row .who{ flex:1; min-width:0; }
+  .partner-row .who .pos{ font-size:10.5px; color:var(--ink-soft); line-height:1.5; }
+  .partner-row .who .nm{ font-size:13.5px; font-weight:700; margin-top:2px; }
+  .partner-row .who .nm .co{ color:var(--ink-soft); font-weight:600; }
   .partner-row a.call-chip{
+    flex:0 0 auto; white-space:nowrap;
     background:#fff; border:1px solid var(--line);
-    border-radius:10px; padding:7px 11px;
+    border-radius:10px; padding:7px 11px; margin-left:10px;
     font-size:12.5px; font-weight:700; color:var(--ink); text-decoration:none;
   }
 
@@ -229,19 +232,19 @@
         </ul>
       </div>
       <div class="partner-row">
-        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác · 대주중공업</div><div class="nm">신우현</div></div>
+        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác</div><div class="nm"><span class="co">대주중공업</span> · 신우현</div></div>
         <a class="call-chip" href="tel:01088461879">010-8846-1879</a>
       </div>
       <div class="partner-row">
-        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác · 약동산업</div><div class="nm">임태경</div></div>
+        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác</div><div class="nm"><span class="co">약동산업</span> · 임태경</div></div>
         <a class="call-chip" href="tel:01062496142">010-6249-6142</a>
       </div>
       <div class="partner-row">
-        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác · 영신디엔씨</div><div class="nm">김범찬</div></div>
+        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác</div><div class="nm"><span class="co">영신디엔씨</span> · 김범찬</div></div>
         <a class="call-chip" href="tel:01096527768">010-9652-7768</a>
       </div>
       <div class="partner-row">
-        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác · 신영토건</div><div class="nm">이경현</div></div>
+        <div class="who"><div class="pos">협력사 · 合作公司 · Đối tác</div><div class="nm"><span class="co">신영토건</span> · 이경현</div></div>
         <a class="call-chip" href="tel:01085942588">010-8594-2588</a>
       </div>
     </div>

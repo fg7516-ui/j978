@@ -2769,10 +2769,19 @@ function fillForm(w){
   selFloors = (w.floors || []).slice();
   selEquip  = (w.equip  || []).slice();
   draftZones = (w.zones || []).map(z => ({x:z.x, y:z.y, w:z.w, h:z.h}));
-  draftMarks = (w.marks || []).map(m => ({eq:m.eq, x:m.x, y:m.y}));
+  draftMarks = (w.marks || [])
+    .filter(m => m && typeof m.x === 'number')
+    .map(m => {
+      const k = m.t || 'eq';
+      return (k === 'eq') ? { t:'eq', eq:m.eq, x:m.x, y:m.y }
+                          : { t:k, x:m.x, y:m.y };
+    })
+    .filter(m => m.t !== 'eq' || m.eq);   // 장비명 없는 찌꺼기 제거
   buildCoButtons();
   buildFloorChips();
   buildEquipChips();
+  resetDrawZoom();      // 확대 상태로 남아 있으면 불러온 구간·장비가 화면 밖에 있음
+  setMode('zone');
   drawDraft();
 }
 function resetForm(){
@@ -2818,34 +2827,48 @@ function editWork(id){
   document.getElementById('theDate').value = d;
 }
 
+/* 입력이 빠졌을 때 알리고 해당 칸으로 이동 */
+function needInput(msg, elId){
+  alert(msg);
+  const el = elId && document.getElementById(elId);
+  if (el){
+    el.scrollIntoView({ behavior:'smooth', block:'center' });
+    if (el.focus) setTimeout(() => el.focus(), 350);
+  }
+  return false;
+}
+
 function saveWork(){
   const name = document.getElementById('fName').value.trim();
-  if (!name){ alert('작업명을 입력해 주세요.'); return; }
-  if (!draftZones.length){ alert('배치도에서 작업구간을 드래그해 지정해 주세요.'); return; }
+  if (!name) return needInput('작업명을 입력해 주세요.', 'fName');
+  if (!draftZones.length)
+    return needInput('배치도에서 작업구간을 드래그해 지정해 주세요.', 'drawMap');
 
   const detail = document.getElementById('fDetail').value.trim();
-  if (!detail){ alert('작업 내용을 입력해 주세요.'); return; }
-  if (!selFloors.length){ alert('작업 층을 선택해 주세요.'); return; }
+  if (!detail) return needInput('작업 내용을 입력해 주세요.', 'fDetail');
+  if (!selFloors.length) return needInput('작업 층을 선택해 주세요.', 'flChips');
 
   const leadName = document.getElementById('fLeadName').value.trim();
-  if (!leadName){ alert('작업지휘자 이름을 입력해 주세요.'); return; }
+  if (!leadName) return needInput('작업지휘자 이름을 입력해 주세요.', 'fLeadName');
 
   const supName = document.getElementById('fSupName').value.trim();
-  if (!supName){ alert('관리감독자(협력업체) 이름을 입력해 주세요.'); return; }
+  if (!supName) return needInput('관리감독자(협력업체) 이름을 입력해 주세요.', 'fSupName');
 
   const cnt = document.getElementById('fCount').value.trim();
-  if (!cnt){ alert('작업 인원을 입력해 주세요.'); return; }
+  if (!cnt) return needInput('작업 인원을 입력해 주세요.', 'fCount');
 
   // 장비를 사용하면 장비별 번호와 운전원 필수
   if (selEquip.length){
-    if (!eqUnits.length){
-      alert('장비를 사용하는 작업은 장비별 배치 인원을 입력해야 합니다.'); return;
-    }
+    if (!eqUnits.length)
+      return needInput('장비를 사용하는 작업은 장비별 배치 인원을 입력해야 합니다.', 'eqUnitList');
     for (let i = 0; i < eqUnits.length; i++){
       const u = eqUnits[i];
-      if (!u.eq){      alert('장비 ' + (i+1) + '의 종류를 선택해 주세요.'); return; }
-      if (!(u.no||'').trim()){     alert('장비 ' + (i+1) + '의 번호를 입력해 주세요.'); return; }
-      if (!(u.opName||'').trim()){ alert('장비 ' + (i+1) + '의 운전원 이름을 입력해 주세요.'); return; }
+      if (!u.eq)
+        return needInput('장비 ' + (i+1) + '의 종류를 선택해 주세요.', 'eqUnitList');
+      if (!(u.no||'').trim())
+        return needInput('장비 ' + (i+1) + '의 번호를 입력해 주세요.\n\n이전 작업을 불러온 경우 장비 번호는 새로 입력해야 합니다.', 'eqUnitList');
+      if (!(u.opName||'').trim())
+        return needInput('장비 ' + (i+1) + '의 운전원 이름을 입력해 주세요.', 'eqUnitList');
     }
   }
 
@@ -2940,6 +2963,21 @@ function loadPrev(d, id){
   closeModal();
   go('add');
   window.scrollTo({ top:0, behavior:'smooth' });
+
+  // 새로 채워야 하는 항목 안내
+  const todo = [];
+  if (selEquip.length && eqUnits.some(u => !(u.no||'').trim()))
+    todo.push('장비 번호');
+  if (selEquip.length && eqUnits.some(u => !(u.opName||'').trim()))
+    todo.push('운전원 이름');
+  if (todo.length){
+    setTimeout(() => {
+      alert(d + ' 작업을 불러왔습니다.\n\n아래 항목은 당일 기준으로 새로 입력해 주세요.\n· ' +
+            todo.join('\n· '));
+      const el = document.getElementById('eqUnitList');
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+    }, 400);
+  }
 }
 
 function delWork(id){
@@ -3133,7 +3171,8 @@ function render(){
         const meta = [];
         if (w.count) meta.push('인원 ' + w.count + '명');
         meta.push('구간 ' + (w.zones||[]).length + '개');
-        if ((w.marks||[]).length) meta.push('장비 ' + w.marks.length + '대');
+        const nEqL = (w.marks||[]).filter(m => markKind(m) === 'eq').length;
+        if (nEqL) meta.push('장비 ' + nEqL + '대');
         return '<div class="work-item" style="border-left-color:'+c+'"' +
           ' onclick="openCompanyModal(\''+esc(w.company)+'\')">' +
           '<div class="wtop"><div>' +
@@ -3141,8 +3180,10 @@ function render(){
             '<div class="wname">'+esc(w.name)+'</div>' +
           '</div>' +
           '<div style="display:flex; gap:2px; flex:0 0 auto">' +
-            '<button class="wdel" style="color:#1D4ED8" onclick="event.stopPropagation(); editWork(\''+w.id+'\')">수정</button>' +
-            '<button class="wdel" onclick="event.stopPropagation(); delWork(\''+w.id+'\')">삭제</button>' +
+            '<button type="button" class="wdel" style="color:#1D4ED8"' +
+              ' onclick="event.stopPropagation(); event.preventDefault(); editWork(\''+w.id+'\'); return false;">수정</button>' +
+            '<button type="button" class="wdel"' +
+              ' onclick="event.stopPropagation(); event.preventDefault(); delWork(\''+w.id+'\'); return false;">삭제</button>' +
           '</div></div>' +
           (w.detail ? '<div class="wdetail">'+esc(w.detail)+'</div>' : '') +
           tagRow(w) +

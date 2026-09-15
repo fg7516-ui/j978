@@ -146,6 +146,18 @@
   }
   #viewMap .eqmark, .modal-sheet .eqmark{ pointer-events:none; }
 
+  /* 간략 마커 — 아이콘 / 신·유 약자만 */
+  .eqmark.mini{
+    padding:0; width:26px; height:26px; border-radius:50%;
+    justify-content:center; font-size:12px; font-weight:900;
+    background:rgba(17,17,17,.9);
+  }
+  .eqmark.mini::after{ border-top-color:rgba(17,17,17,.9); bottom:-5px; }
+  .eqmark.mini.sig{ background:rgba(190,18,18,.95); }
+  .eqmark.mini.sig::after{ border-top-color:rgba(190,18,18,.95); }
+  .eqmark.mini.gui{ background:rgba(202,138,4,.96); }
+  .eqmark.mini.gui::after{ border-top-color:rgba(202,138,4,.96); }
+
   /* 드래그 확대 */
   .zoombox{
     position:relative; width:100%; overflow:hidden;
@@ -3223,16 +3235,28 @@ function buildArmList(){
 function armEq(e){ armedEq = e; buildArmList(); }
 
 function markKind(m){ return m.t || 'eq'; }
-function markHTML(m, idx){
+/* compact = true → 이름 없이 아이콘·약자만 (대시보드용) */
+function markHTML(m, idx, compact){
   const del = (idx !== null && idx !== undefined)
     ? '<button type="button" class="mdel" onclick="event.stopPropagation(); rmMark('+idx+')">×</button>'
     : '';
   const k = markKind(m);
+  const pos = 'left:'+m.x+'%; top:'+m.y+'%;';
+
+  if (compact){
+    if (k === 'sig')
+      return '<div class="eqmark mini sig" style="'+pos+'">신' + del + '</div>';
+    if (k === 'guide')
+      return '<div class="eqmark mini gui" style="'+pos+'">유' + del + '</div>';
+    return '<div class="eqmark mini" style="'+pos+'" title="'+esc(eqShort(m.eq))+'">' +
+      eqIcon(m.eq, 15) + del + '</div>';
+  }
+
   if (k === 'sig')
-    return '<div class="eqmark sig" style="left:'+m.x+'%; top:'+m.y+'%;">신호수' + del + '</div>';
+    return '<div class="eqmark sig" style="'+pos+'">신호수' + del + '</div>';
   if (k === 'guide')
-    return '<div class="eqmark gui" style="left:'+m.x+'%; top:'+m.y+'%;">유도원' + del + '</div>';
-  return '<div class="eqmark" style="left:'+m.x+'%; top:'+m.y+'%;">' +
+    return '<div class="eqmark gui" style="'+pos+'">유도원' + del + '</div>';
+  return '<div class="eqmark" style="'+pos+'">' +
     '<span class="em">'+eqIcon(m.eq, 12)+'</span>'+esc(eqShort(m.eq)) + del + '</div>';
 }
 function rmMark(i){ draftMarks.splice(i,1); drawDraft(); }
@@ -3732,11 +3756,10 @@ function render(){
       hz.innerHTML = zoneHTML(z, cc, { risk:w.risk, label:w.name });
       while (hz.firstChild) vm.appendChild(hz.firstChild);
     });
-    // 대시보드 지도에는 장비만 표시 (신호수·유도원은 확대 시에만)
-    const eqOnly = (w.marks || []).filter(m => markKind(m) === 'eq');
-    if (eqOnly.length){
+    // 대시보드는 아이콘·약자만 (이름은 확대 시 표시)
+    if ((w.marks || []).length){
       const holder = document.createElement('div');
-      holder.innerHTML = eqOnly.map(m => markHTML(m, null)).join('');
+      holder.innerHTML = w.marks.map(m => markHTML(m, null, true)).join('');
       while (holder.firstChild) vm.appendChild(holder.firstChild);
     }
   });

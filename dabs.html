@@ -1006,6 +1006,15 @@
     </div>
 
     <div class="admin-card">
+      <h3>🖼 금일 작업사항 다운로드</h3>
+      <p>선택된 날짜의 작업사항을 이미지 4장으로 내려받습니다.<br>
+         ① 현장 배치도 ② 업체별 작업내용 ③ 자재 반입·반출 계획 ④ 단독작업 현황</p>
+      <button type="button" class="btn btn-main" id="packBtn" onclick="downloadDayPack()"
+              style="width:100%; padding:12px">PNG 4장 다운로드</button>
+      <p id="packMsg" style="margin:10px 0 0; display:none"></p>
+    </div>
+
+    <div class="admin-card">
       <h3>📤 데이터 내보내기</h3>
       <p>선택된 날짜의 작업 목록을 텍스트로 복사해 카카오톡이나 보고용으로 붙여넣을 수 있습니다.</p>
       <button type="button" class="btn btn-ghost" onclick="exportDay()">이 날짜 작업 복사하기</button>
@@ -2315,6 +2324,349 @@ function openShiftModal(kind){
     works.map(workCardHTML).join('');
 
   document.getElementById('detailModal').classList.add('open');
+}
+
+/* ===================================================================
+   금일 작업사항 이미지 4종 다운로드
+   =================================================================== */
+const CV_FONT = "'맑은 고딕','Malgun Gothic','Apple SD Gothic Neo',sans-serif";
+const cvf = (px, bold) => (bold ? 'bold ' : '') + px + "px " + CV_FONT;
+
+/* SVG 장비 아이콘을 캔버스에 그림 (path·rect·circle·ellipse 지원) */
+function cvEqIcon(ctx, name, cx, cy, size, color){
+  const svg = EQ_SVG[EQ_MAP[name] || 'etc'] || '';
+  ctx.save();
+  ctx.translate(cx - size/2, cy - size/2);
+  ctx.scale(size/24, size/24);
+  ctx.fillStyle = color || '#fff';
+
+  let m;
+  const reP = /<path[^>]*\sd="([^"]+)"/g;
+  while ((m = reP.exec(svg))) { try { ctx.fill(new Path2D(m[1])); } catch(e){} }
+
+  const reR = /<rect[^>]*?x="([\d.]+)"[^>]*?y="([\d.]+)"[^>]*?width="([\d.]+)"[^>]*?height="([\d.]+)"([^>]*)>/g;
+  while ((m = reR.exec(svg))){
+    const rx = /rx="([\d.]+)"/.exec(m[5]);
+    const x = +m[1], y = +m[2], w = +m[3], h = +m[4], r = rx ? +rx[1] : 0;
+    ctx.beginPath();
+    if (r > 0 && ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+    else ctx.rect(x, y, w, h);
+    ctx.fill();
+  }
+  const reC = /<circle[^>]*?cx="([\d.]+)"[^>]*?cy="([\d.]+)"[^>]*?r="([\d.]+)"/g;
+  while ((m = reC.exec(svg))){
+    ctx.beginPath(); ctx.arc(+m[1], +m[2], +m[3], 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* 둥근 사각형 */
+function cvRound(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+/* 줄바꿈 계산 */
+function cvWrap(ctx, text, maxW){
+  const out = [];
+  String(text == null ? '' : text).split('\n').forEach(para => {
+    let line = '';
+    for (const ch of para){
+      if (ctx.measureText(line + ch).width > maxW && line){ out.push(line); line = ch; }
+      else line += ch;
+    }
+    out.push(line);
+  });
+  return out;
+}
+/* 제목 머리 */
+function cvHeader(ctx, W, title, sub){
+  ctx.fillStyle = '#16242B'; ctx.fillRect(0, 0, W, 96);
+  ctx.fillStyle = '#E8500F'; ctx.fillRect(0, 96, W, 6);
+  ctx.fillStyle = '#fff'; ctx.font = cvf(34, true); ctx.textBaseline = 'middle';
+  ctx.fillText(title, 40, 44);
+  ctx.fillStyle = '#AFC0C8'; ctx.font = cvf(19);
+  ctx.fillText(sub, 40, 74);
+  ctx.fillStyle = '#AFC0C8'; ctx.font = cvf(18);
+  ctx.textAlign = 'right';
+  ctx.fillText('더현대광주 신축공사', W - 40, 58);
+  ctx.textAlign = 'left';
+}
+/* 다운로드 */
+function cvSave(canvas, filename){
+  return new Promise(res => {
+    canvas.toBlob(b => {
+      const url = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => { URL.revokeObjectURL(url); res(); }, 600);
+    }, 'image/png');
+  });
+}
+
+/* ① 현장 배치도 */
+function packMap(d, works){
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const IW = img.naturalWidth, IH = img.naturalHeight;
+      const cv = document.createElement('canvas');
+      cv.width = IW; cv.height = IH + 102;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+      cvHeader(ctx, IW, '현장 배치도 — 작업구간 현황', d);
+      ctx.drawImage(img, 0, 102, IW, IH);
+
+      const px = v => v / 100 * IW;
+      const py = v => 102 + v / 100 * IH;
+
+      works.forEach(w => {
+        const col = coColor(w.company);
+        (w.zones || []).forEach(z => {
+          ctx.save();
+          ctx.lineWidth = w.risk ? 7 : 4.5;
+          ctx.strokeStyle = col;
+          ctx.fillStyle = col + (w.risk ? '55' : '38');
+          ctx.beginPath();
+          if (z.pts && z.pts.length){
+            z.pts.forEach((p,i) => i ? ctx.lineTo(px(p.x), py(p.y)) : ctx.moveTo(px(p.x), py(p.y)));
+            ctx.closePath();
+          } else {
+            ctx.rect(px(z.x), py(z.y), px(z.w), z.h / 100 * IH);
+          }
+          ctx.fill(); ctx.stroke();
+          ctx.restore();
+
+          // 작업명 라벨
+          const b = zoneBox(z);
+          const lx = px(b.x) + 6, ly = py(b.y) + 6;
+          const label = (w.risk ? '[고위험] ' : '') + w.name;
+          ctx.font = cvf(20, true);
+          const tw = ctx.measureText(label).width;
+          ctx.fillStyle = col;
+          cvRound(ctx, lx, ly, tw + 20, 32, 6); ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+          ctx.fillText(label, lx + 10, ly + 17);
+        });
+      });
+
+      // 장비 아이콘 · 신호수 · 유도원
+      works.forEach(w => {
+        (w.marks || []).forEach(m => {
+          const x = px(m.x), y = py(m.y), k = markKind(m);
+          if (k === 'eq'){
+            ctx.fillStyle = 'rgba(17,17,17,.92)';
+            ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI*2); ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+            cvEqIcon(ctx, m.eq, x, y, 26, '#fff');
+          } else {
+            const isSig = (k === 'sig');
+            ctx.fillStyle = isSig ? '#DC2626' : '#CA8A04';
+            ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI*2); ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = cvf(19, true);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(isSig ? '신' : '유', x, y + 1);
+            ctx.textAlign = 'left';
+          }
+        });
+      });
+
+      // 범례
+      let lx = 40, ly = IH + 102 - 44;
+      ctx.font = cvf(19, true); ctx.textBaseline = 'middle';
+      const used = COMPANIES.filter(c => works.some(w => w.company === c.name));
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      cvRound(ctx, 24, ly - 26, IW - 48, 52, 10); ctx.fill();
+      used.forEach(c => {
+        ctx.fillStyle = c.color;
+        cvRound(ctx, lx, ly - 9, 18, 18, 4); ctx.fill();
+        ctx.fillStyle = '#1B2A31';
+        ctx.fillText(c.name, lx + 26, ly);
+        lx += 26 + ctx.measureText(c.name).width + 26;
+      });
+      [['#DC2626','신호수'],['#CA8A04','유도원']].forEach(([cc,nm]) => {
+        ctx.fillStyle = cc;
+        ctx.beginPath(); ctx.arc(lx + 9, ly, 9, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#1B2A31';
+        ctx.fillText(nm, lx + 26, ly);
+        lx += 26 + ctx.measureText(nm).width + 26;
+      });
+      res(cv);
+    };
+    img.onerror = () => rej(new Error('배치도 이미지를 불러오지 못했습니다.'));
+    img.src = 'dabs-map.jpg';
+  });
+}
+
+/* 표 그리기 공통 */
+function packTable(d, title, cols, rows, colorOf){
+  const W = 1600, PAD = 40;
+  const tmp = document.createElement('canvas').getContext('2d');
+  const inner = W - PAD*2;
+  const total = cols.reduce((a,c) => a + c.w, 0);
+  const cw = cols.map(c => Math.round(c.w / total * inner));
+
+  // 행 높이 계산
+  tmp.font = cvf(20);
+  const heights = rows.map(r => {
+    let h = 46;
+    r.forEach((cell, i) => {
+      tmp.font = cvf(20, !!cols[i].bold);
+      const lines = cvWrap(tmp, cell, cw[i] - 28);
+      h = Math.max(h, lines.length * 29 + 22);
+    });
+    return h;
+  });
+
+  const H = 102 + 30 + 54 + heights.reduce((a,b) => a+b, 0) + 50;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = Math.max(H, 400);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, cv.height);
+  cvHeader(ctx, W, title, d);
+
+  let y = 132;
+  // 머리행
+  let x = PAD;
+  ctx.fillStyle = '#EDE8E2'; ctx.fillRect(PAD, y, inner, 54);
+  ctx.strokeStyle = '#D9D2CA'; ctx.lineWidth = 1;
+  cols.forEach((c, i) => {
+    ctx.strokeRect(x, y, cw[i], 54);
+    ctx.fillStyle = '#1B2A31'; ctx.font = cvf(21, true);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(c.t, x + cw[i]/2, y + 28);
+    x += cw[i];
+  });
+  ctx.textAlign = 'left';
+  y += 54;
+
+  if (!rows.length){
+    ctx.fillStyle = '#6B7A82'; ctx.font = cvf(22);
+    ctx.textAlign = 'center';
+    ctx.fillText('등록된 내용이 없습니다.', W/2, y + 60);
+    ctx.textAlign = 'left';
+    return cv;
+  }
+
+  rows.forEach((r, ri) => {
+    const h = heights[ri];
+    x = PAD;
+    ctx.fillStyle = ri % 2 ? '#F9F7F5' : '#fff';
+    ctx.fillRect(PAD, y, inner, h);
+    const accent = colorOf ? colorOf(ri) : null;
+    if (accent){ ctx.fillStyle = accent; ctx.fillRect(PAD, y, 6, h); }
+
+    r.forEach((cell, i) => {
+      ctx.strokeStyle = '#E3DDD6';
+      ctx.strokeRect(x, y, cw[i], h);
+      ctx.font = cvf(20, !!cols[i].bold);
+      ctx.fillStyle = (i === 0 && accent) ? accent : '#1B2A31';
+      const lines = cvWrap(ctx, cell, cw[i] - 28);
+      ctx.textBaseline = 'top';
+      lines.forEach((ln, li) => ctx.fillText(ln, x + 14, y + 13 + li*29));
+      x += cw[i];
+    });
+    y += h;
+  });
+  return cv;
+}
+
+/* ② 업체별 작업내용 */
+function packWorks(d, works){
+  const rows = works.map(w => [
+    w.company,
+    (w.risk ? '[고위험] ' : '') + w.name,
+    w.detail || '-'
+  ]);
+  return packTable(d, '업체별 작업내용', [
+    { t:'업체명', w:22, bold:true },
+    { t:'작업내용', w:33 },
+    { t:'안전대책', w:45 }
+  ], rows, ri => coColor(works[ri].company));
+}
+
+/* ③ 자재 반입·반출 계획 */
+function packMaterial(d){
+  const arr = matsFor(d);
+  const rows = arr.map(m => [
+    m.gate, m.time, m.company, m.material,
+    m.vehicle || '-', m.place || '-',
+    (m.handler || '-') + (m.phone ? '\n' + m.phone : '')
+  ]);
+  return packTable(d, '자재 반입 · 반출 계획', [
+    { t:'출입장소', w:11, bold:true },
+    { t:'시간', w:11 },
+    { t:'업체명', w:16 },
+    { t:'자재명', w:16 },
+    { t:'차량/대수', w:14 },
+    { t:'하역장소', w:16 },
+    { t:'하역물 담당자', w:16 }
+  ], rows, ri => arr[ri].gate === '2GATE' ? '#B45309' : '#1D4ED8');
+}
+
+/* ④ 단독작업 현황 */
+function packSolo(d){
+  const rows = solosFor(d);
+  const body = rows.map(r => [
+    r.company, r.place, r.name, r.job || '-',
+    r.work || '-', r.age || '-', r.cam || '-', r.note || '-'
+  ]);
+  const cv = packTable(d, '명일 단독작업 현황', [
+    { t:'업체명', w:14, bold:true },
+    { t:'작업위치', w:17 },
+    { t:'성명', w:9 },
+    { t:'직종', w:10 },
+    { t:'작업내용', w:22 },
+    { t:'고령/초고령', w:10 },
+    { t:'바디캠', w:9 },
+    { t:'특이사항', w:9 }
+  ], body, ri => coColor(rows[ri].company));
+
+  // 원칙 문구
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#A3151F'; ctx.font = cvf(19, true);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('※ 원칙 : 2인 1조 작업 기준 준수 (불가피한 경우에 한하여 단독작업 가능 → 바디캠 의무 착용)',
+    40, cv.height - 26);
+  return cv;
+}
+
+/* 실행 */
+async function downloadDayPack(){
+  const d = curDate();
+  const works = store[d] || [];
+  const btn = document.getElementById('packBtn');
+  const msg = document.getElementById('packMsg');
+  const say = (t, err) => {
+    msg.style.display = 'block';
+    msg.style.color = err ? '#A3151F' : '#146640';
+    msg.textContent = t;
+  };
+
+  btn.disabled = true;
+  const label = btn.textContent;
+  try {
+    btn.textContent = '① 배치도 생성 중...';
+    await cvSave(await packMap(d, works), d + '_1_현장배치도.png');
+
+    btn.textContent = '② 작업내용 생성 중...';
+    await cvSave(packWorks(d, works), d + '_2_업체별작업내용.png');
+
+    btn.textContent = '③ 자재계획 생성 중...';
+    await cvSave(packMaterial(d), d + '_3_자재반입반출계획.png');
+
+    btn.textContent = '④ 단독작업 생성 중...';
+    await cvSave(packSolo(d), d + '_4_단독작업현황.png');
+
+    say('PNG 4장을 내려받았습니다. (' + d + ')');
+  } catch(e){
+    say('생성에 실패했습니다: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
 }
 
 /* ---------- 관리 탭 잠금 ---------- */

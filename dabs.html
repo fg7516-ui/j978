@@ -825,6 +825,47 @@
     font-size:12px; font-weight:800; color:var(--accent);
     margin:0 0 9px; letter-spacing:.5px;
   }
+  .meet-sec.row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .meet-more{
+    background:#24343D; border:1px solid #33454F; border-radius:6px;
+    padding:4px 9px; font-family:inherit; font-size:10.5px; font-weight:700;
+    color:#C6D3D9; cursor:pointer; letter-spacing:0; flex:0 0 auto;
+  }
+  .meet-more:hover{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  /* 원본 서식 팝업 */
+  .doc-view{
+    display:none; position:fixed; inset:0; z-index:95;
+    background:rgba(8,14,18,.92);
+    flex-direction:column;
+  }
+  .doc-view.open{ display:flex; }
+  .doc-head{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; background:#16242B; border-bottom:1px solid #24343D;
+    flex:0 0 auto;
+  }
+  .doc-head .ttl{ font-size:16px; font-weight:800; color:#fff; }
+  .doc-head .sp{ flex:1; }
+  .doc-head button{
+    background:#24343D; color:#fff; border:none; border-radius:8px;
+    padding:8px 14px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .doc-head button:hover{ background:#2E4250; }
+  .doc-head button.main{ background:var(--accent); }
+  .doc-body{
+    flex:1; overflow:auto; padding:20px;
+    display:flex; align-items:flex-start; justify-content:center;
+  }
+  .doc-body img{
+    max-width:100%; height:auto; background:#fff;
+    border-radius:8px; box-shadow:0 6px 30px rgba(0,0,0,.5);
+  }
+  .doc-body img.zoom{ max-width:none; width:auto; cursor:zoom-out; }
+  .doc-body img:not(.zoom){ cursor:zoom-in; }
+  .doc-loading{ color:#9FB2BB; font-size:14px; font-weight:700; padding:40px; }
   .meet-sec:not(:first-child){ margin-top:22px; }
   .meet-card{
     background:#1A2B34; border:1px solid #24343D;
@@ -1360,6 +1401,18 @@
       <button type="button" class="btn btn-main" onclick="downloadSoloPptx()" style="width:100%; padding:13px;">📑 PPT로 다운로드</button>
     </div>
   </div>
+</div>
+
+<!-- 원본 서식 보기 (회의 모드) -->
+<div class="doc-view" id="docView">
+  <div class="doc-head">
+    <span class="ttl" id="docTitle"></span>
+    <span class="sp"></span>
+    <button type="button" onclick="toggleDocZoom()" id="docZoomBtn">원본 크기</button>
+    <button type="button" class="main" onclick="saveDocImage()">PNG 저장</button>
+    <button type="button" onclick="closeMeetDoc()">✕ 닫기</button>
+  </div>
+  <div class="doc-body" id="docBody"></div>
 </div>
 
 <!-- DABs 회의 모드 (웹 전용) -->
@@ -3131,7 +3184,8 @@ function renderMeet(){
 
   // 자재 반입·반출
   const mats = matsFor(d);
-  s += '<div class="meet-sec">자재 반입 · 반출 계획 (' + mats.length + '건)</div>';
+  s += '<div class="meet-sec row">자재 반입 · 반출 계획 (' + mats.length + '건)' +
+       '<button type="button" class="meet-more" onclick="openMeetDoc(\'mat\')">자세히 보기</button></div>';
   if (!mats.length){
     s += '<div class="meet-empty">등록된 자재 계획이 없습니다.</div>';
   } else {
@@ -3152,7 +3206,8 @@ function renderMeet(){
 
   // 단독작업
   const solos = solosFor(d);
-  s += '<div class="meet-sec">단독작업 현황 (' + solos.length + '명)</div>';
+  s += '<div class="meet-sec row">단독작업 현황 (' + solos.length + '명)' +
+       '<button type="button" class="meet-more" onclick="openMeetDoc(\'solo\')">자세히 보기</button></div>';
   if (!solos.length){
     s += '<div class="meet-empty">등록된 단독작업자가 없습니다.</div>';
   } else {
@@ -3174,6 +3229,51 @@ function renderMeet(){
   }
 
   side.innerHTML = s;
+}
+
+/* ── 원본 서식 팝업 (엑셀 · PPT 출력 화면) ── */
+let docCanvas = null, docName = '';
+
+function openMeetDoc(kind){
+  const d = curDate();
+  const body = document.getElementById('docBody');
+  const view = document.getElementById('docView');
+
+  document.getElementById('docTitle').textContent =
+    (kind === 'mat' ? '자재 반입 · 반출 계획' : '명일 단독작업 현황') + ' — ' + d;
+  body.innerHTML = '<div class="doc-loading">불러오는 중...</div>';
+  view.classList.add('open');
+
+  setTimeout(() => {
+    try {
+      docCanvas = (kind === 'mat') ? packMaterial(d) : packSolo(d);
+      docName = d + (kind === 'mat' ? '_자재반입반출계획.png' : '_단독작업현황.png');
+      const img = new Image();
+      img.src = docCanvas.toDataURL('image/png');
+      img.alt = document.getElementById('docTitle').textContent;
+      img.onclick = toggleDocZoom;
+      body.innerHTML = '';
+      body.appendChild(img);
+      document.getElementById('docZoomBtn').textContent = '원본 크기';
+    } catch(e){
+      body.innerHTML = '<div class="doc-loading">불러오지 못했습니다: ' + esc(e.message) + '</div>';
+    }
+  }, 30);
+}
+function closeMeetDoc(){
+  document.getElementById('docView').classList.remove('open');
+  document.getElementById('docBody').innerHTML = '';
+  docCanvas = null;
+}
+function toggleDocZoom(){
+  const img = document.querySelector('#docBody img');
+  if (!img) return;
+  const on = img.classList.toggle('zoom');
+  document.getElementById('docZoomBtn').textContent = on ? '화면에 맞추기' : '원본 크기';
+}
+function saveDocImage(){
+  if (!docCanvas) return;
+  cvSave(docCanvas, docName);
 }
 
 /* ── 회의 배치도 확대 ── */
@@ -3251,7 +3351,9 @@ function meetPct(e){
 
 /* ESC 로 닫기 */
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeMeet();
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('docView').classList.contains('open')) closeMeetDoc();
+  else closeMeet();
 });
 
 /* ---------- 관리 탭 잠금 ---------- */

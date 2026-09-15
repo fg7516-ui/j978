@@ -2587,49 +2587,239 @@ function packWorks(d, works){
   ], rows, ri => coColor(works[ri].company));
 }
 
-/* ③ 자재 반입·반출 계획 */
-function packMaterial(d){
-  const arr = matsFor(d);
-  const rows = arr.map(m => [
-    m.gate, m.time, m.company, m.material,
-    m.vehicle || '-', m.place || '-',
-    (m.handler || '-') + (m.phone ? '\n' + m.phone : '')
-  ]);
-  return packTable(d, '자재 반입 · 반출 계획', [
-    { t:'출입장소', w:11, bold:true },
-    { t:'시간', w:11 },
-    { t:'업체명', w:16 },
-    { t:'자재명', w:16 },
-    { t:'차량/대수', w:14 },
-    { t:'하역장소', w:16 },
-    { t:'하역물 담당자', w:16 }
-  ], rows, ri => arr[ri].gate === '2GATE' ? '#B45309' : '#1D4ED8');
+/* 칸 하나 그리기 */
+function cell(ctx, x, y, w, h, text, o){
+  o = o || {};
+  if (o.fill){ ctx.fillStyle = o.fill; ctx.fillRect(x, y, w, h); }
+  ctx.strokeStyle = o.border || '#808080';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  if (text === '' || text == null) return;
+
+  ctx.font = cvf(o.size || 19, o.bold);
+  ctx.fillStyle = o.color || '#1B2A31';
+  const lines = String(text).split('\n');
+  const lh = (o.size || 19) + 7;
+  const align = o.align || 'center';
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  const tx = align === 'left' ? x + 10 : x + w/2;
+  const start = y + h/2 - (lines.length - 1) * lh / 2;
+  lines.forEach((ln, i) => ctx.fillText(ln, tx, start + i*lh));
+  ctx.textAlign = 'left';
 }
 
-/* ④ 단독작업 현황 */
+/* ③ 자재 반입·반출 계획 — 엑셀 서식 그대로 */
+function packMaterial(d){
+  const arr = matsFor(d);
+  const GRAY_H = '#BFBFBF', GRAY_T = '#C9C9C9', GRAY_C = '#F2F2F2', GRAY_E = '#D9D9D9';
+
+  const PAD = 30, W = 2000;
+  const inner = W - PAD*2;
+  const wT = 150;
+  const gate = [195, 185, 160, 175, 180];            // 합 895 (시간칸 150 + 895×2 = 1940)
+  const gw = gate.reduce((a,b)=>a+b, 0);
+  const cols = [wT].concat(gate, gate);
+  const totalW = wT + gw*2;
+  const offX = PAD + Math.max(0, (inner - totalW) / 2);
+
+  // 행 높이 계산
+  const tmp = document.createElement('canvas').getContext('2d');
+  tmp.font = cvf(19);
+  const rowH = TIME_SLOTS.map(slot => {
+    let n = 1;
+    ['1GATE','2GATE'].forEach(g => {
+      const cnt = arr.filter(m => m.time === slot && m.gate === g).length;
+      n = Math.max(n, cnt || 1);
+    });
+    return Math.max(56, 26 + n * 30);
+  });
+
+  const H = 102 + 20 + 56 + 46 + 66 + 56 + rowH.reduce((a,b)=>a+b,0) + 40;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  cvHeader(ctx, W, '자재 반입 · 반출 계획', d);
+
+  let y = 122;
+  const mm = d.slice(5,7), dd = d.slice(8,10);
+
+  // 제목행
+  cell(ctx, offX, y, totalW, 56,
+    mm + '월 ' + dd + '일 자재 반입·반출 계획',
+    { fill:GRAY_H, bold:true, size:26 });
+  y += 56;
+
+  // 출입장소 / GATE
+  cell(ctx, offX, y, wT, 46, '출입장소', { fill:GRAY_H, bold:true, size:18 });
+  cell(ctx, offX + wT, y, gw, 46, '1GATE', { fill:GRAY_H, bold:true, size:21 });
+  cell(ctx, offX + wT + gw, y, gw, 46, '2GATE', { fill:GRAY_H, bold:true, size:21 });
+  y += 46;
+
+  // 항목행
+  const heads = ['업체명','자재명','차량/대수','하역장소','하역물 담당자\n(연락처)'];
+  cell(ctx, offX, y, wT, 66, '시간', { fill:GRAY_H, bold:true, size:18 });
+  let x = offX + wT;
+  for (let g = 0; g < 2; g++){
+    heads.forEach((h, i) => { cell(ctx, x, y, gate[i], 66, h, { fill:GRAY_H, bold:true, size:17 }); x += gate[i]; });
+  }
+  y += 66;
+
+  // 예시행
+  cell(ctx, offX, y, wT, 56, '(예 시)', { fill:GRAY_E, size:16, color:'#9C9C9C' });
+  const ex = [
+    ['OO건설','유로폼','3.5톤/3대','101동 앞','홍길동\n(010-0000-0000)'],
+    ['OO건설','덕트','5톤/2대','103동 앞','홍길동\n(010-0000-0000)']
+  ];
+  x = offX + wT;
+  ex.forEach(row => row.forEach((v, i) => {
+    cell(ctx, x, y, gate[i], 56, v, { fill:GRAY_C, size:15, color:'#9C9C9C' });
+    x += gate[i];
+  }));
+  y += 56;
+
+  // 시간대별
+  TIME_SLOTS.forEach((slot, si) => {
+    const h = rowH[si];
+    cell(ctx, offX, y, wT, h, slot, { fill:GRAY_T, bold:true, size:18 });
+    let xx = offX + wT;
+    ['1GATE','2GATE'].forEach(g => {
+      const rows = arr.filter(m => m.time === slot && m.gate === g);
+      const pick = k => rows.map(m => m[k] || '').filter(Boolean).join('\n');
+      const handler = rows.map(m => {
+        if (!m.handler && !m.phone) return '';
+        return (m.handler || '') + (m.phone ? '\n' + m.phone : '');
+      }).filter(Boolean).join('\n');
+      const vals = [pick('company'), pick('material'), pick('vehicle'), pick('place'), handler];
+      vals.forEach((v, i) => { cell(ctx, xx, y, gate[i], h, v, { fill:GRAY_C, size:17 }); xx += gate[i]; });
+    });
+    y += h;
+  });
+  return cv;
+}
+
+/* ④ 명일 단독작업 현황 — PPT 서식 그대로 */
 function packSolo(d){
   const rows = solosFor(d);
-  const body = rows.map(r => [
-    r.company, r.place, r.name, r.job || '-',
-    r.work || '-', r.age || '-', r.cam || '-', r.note || '-'
-  ]);
-  const cv = packTable(d, '명일 단독작업 현황', [
-    { t:'업체명', w:14, bold:true },
-    { t:'작업위치', w:17 },
-    { t:'성명', w:9 },
-    { t:'직종', w:10 },
-    { t:'작업내용', w:22 },
-    { t:'고령/초고령', w:10 },
-    { t:'바디캠', w:9 },
-    { t:'특이사항', w:9 }
-  ], body, ri => coColor(rows[ri].company));
+  const map = soloSummary(rows);
+  const cos = Object.keys(map);
+
+  const W = 1800, PAD = 50;
+  const inner = W - PAD*2;
+  const HEAD = '#EAF0F9', CAM = '#E2EFDA', R1 = '#D9E2F3', R2 = '#EAF0F9', TOT = '#F3ECE4';
+
+  // 표1 열
+  const t1 = [340, 230, 280, 280, 330, 240];
+  const t1w = t1.reduce((a,b)=>a+b,0);
+  // 표2 열
+  const t2 = [210, 270, 130, 160, 430, 180, 160, 160];
+  const t2w = t2.reduce((a,b)=>a+b,0);
+
+  const tmp = document.createElement('canvas').getContext('2d');
+  const h2 = rows.map(r => {
+    let mx = 54;
+    [r.company, r.place, r.name, r.job, r.work, r.age, r.cam, r.note].forEach((v, i) => {
+      tmp.font = cvf(18);
+      const L = cvWrap(tmp, v || '-', t2[i] - 20).length;
+      mx = Math.max(mx, L * 26 + 22);
+    });
+    return mx;
+  });
+
+  const H = 102 + 60 + 54 + 46 + 44 + 52 + 48 + (cos.length + 1) * 52 + 56
+          + 44 + 78 + (rows.length ? h2.reduce((a,b)=>a+b,0) : 60) + 60;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  cvHeader(ctx, W, '명일 단독작업 현황', d);
+
+  let y = 140;
+  // 제목
+  ctx.fillStyle = '#1B2A31'; ctx.font = cvf(38, true);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('명일 단독작업 현황', W/2, y);
+  ctx.textAlign = 'left';
+  y += 48;
 
   // 원칙 문구
-  const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#A3151F'; ctx.font = cvf(19, true);
-  ctx.textBaseline = 'middle';
-  ctx.fillText('※ 원칙 : 2인 1조 작업 기준 준수 (불가피한 경우에 한하여 단독작업 가능 → 바디캠 의무 착용)',
-    40, cv.height - 26);
+  ctx.fillStyle = '#C00000'; ctx.font = cvf(20, true);
+  ctx.fillText('※ 원칙 : 2인 1조 작업 기준 준수 (단, 공사특성상 불가피한 경우에 한하여 단독작업 가능 → 해당 단독 작업자 바디캠 의무 착용)', PAD, y);
+  y += 46;
+
+  // ▶ 단독작업자 현황
+  ctx.fillStyle = '#1B2A31'; ctx.font = cvf(24, true);
+  ctx.fillText('▶ 단독작업자 현황', PAD, y);
+  y += 38;
+
+  // 표1 머리 (2단)
+  const x0 = PAD + Math.max(0, (inner - t1w) / 2);
+  let x = x0;
+  cell(ctx, x, y, t1[0], 100, '업체명', { fill:HEAD, bold:true, size:20 }); x += t1[0];
+  cell(ctx, x, y, t1[1]+t1[2]+t1[3], 48, '단독작업자수', { fill:HEAD, bold:true, size:20 });
+  cell(ctx, x, y+48, t1[1], 52, '계', { fill:HEAD, bold:true, size:18 });
+  cell(ctx, x+t1[1], y+48, t1[2], 52, '中 고령근로자', { fill:HEAD, bold:true, size:18 });
+  cell(ctx, x+t1[1]+t1[2], y+48, t1[3], 52, '中 초고령근로자', { fill:HEAD, bold:true, size:18 });
+  x += t1[1]+t1[2]+t1[3];
+  cell(ctx, x, y, t1[4], 100, '바디캠 지급(예정)\n수량', { fill:CAM, bold:true, size:19 }); x += t1[4];
+  cell(ctx, x, y, t1[5], 100, '비 고', { fill:HEAD, bold:true, size:20 });
+  y += 100;
+
+  let tt=0, to=0, tv=0, tc=0;
+  cos.forEach((co, i) => {
+    const m = map[co];
+    tt += m.total; to += m.old; tv += m.vold; tc += m.cam;
+    const bg = i % 2 ? R2 : R1;
+    const vals = [co, String(m.total), m.old || '-', m.vold || '-',
+                  String(m.cam), m.notes.length ? m.notes.join(', ') : '-'];
+    x = x0;
+    vals.forEach((v, k) => {
+      cell(ctx, x, y, t1[k], 52, v,
+        { fill:bg, size:19, bold:k===0, align:k===0?'left':'center' });
+      x += t1[k];
+    });
+    y += 52;
+  });
+  // 합계
+  x = x0;
+  [ '합 계', String(tt), String(to), String(tv), String(tc), '-' ].forEach((v,k) => {
+    cell(ctx, x, y, t1[k], 52, v, { fill:TOT, bold:true, size:19, align:k===0?'left':'center' });
+    x += t1[k];
+  });
+  y += 52 + 44;
+
+  // ▶ 세부 현황
+  ctx.fillStyle = '#1B2A31'; ctx.font = cvf(24, true);
+  ctx.fillText('▶ 세부 현황', PAD, y);
+  y += 38;
+
+  const x2 = PAD + Math.max(0, (inner - t2w) / 2);
+  const h2heads = ['업체명','작업위치\n(세부위치 기재)','성명','직종','작업내용',
+                   '고령/초고령\n여부','바디캠\n지급여부','기타\n특이사항'];
+  x = x2;
+  h2heads.forEach((h, i) => {
+    cell(ctx, x, y, t2[i], 78, h, { fill:i===6?CAM:HEAD, bold:true, size:18 });
+    x += t2[i];
+  });
+  y += 78;
+
+  if (!rows.length){
+    cell(ctx, x2, y, t2w, 60, '등록된 단독작업자가 없습니다.', { fill:'#fff', size:20, color:'#6B7A82' });
+  } else {
+    rows.forEach((r, i) => {
+      const bg = i % 2 ? R2 : R1;
+      const vals = [r.company, r.place, r.name, r.job || '-', r.work || '-',
+                    r.age || '-', r.cam || '-', r.note || '-'];
+      x = x2;
+      vals.forEach((v, k) => {
+        cell(ctx, x, y, t2[k], h2[i], v,
+          { fill:bg, size:18, bold:(k===0||k===2), align:k===4?'left':'center' });
+        x += t2[k];
+      });
+      y += h2[i];
+    });
+  }
   return cv;
 }
 

@@ -791,14 +791,32 @@
     position:absolute; border:2px dashed #fff;
     background:rgba(255,255,255,.18); pointer-events:none; z-index:5;
   }
-  .meet-risk{
-    display:block; width:100%; margin-top:8px;
-    background:#24343D; border:1px solid #33454F; border-radius:7px;
-    padding:6px; font-family:inherit; font-size:11px; font-weight:800;
-    color:#9FB2BB; cursor:pointer;
+  /* 확대해도 글자·아이콘은 원래 크기 유지 */
+  .meet-inner .eqmark{
+    transform:translate(-50%,-100%) scale(var(--mk,1));
+    transform-origin:50% 100%;
   }
-  .meet-risk:hover{ background:#2E4250; }
-  .meet-risk.on{ background:#DC2626; border-color:#8F1620; color:#fff; }
+  .meet-inner .zlabel{
+    transform:scale(var(--mk,1));
+    transform-origin:0 0;
+  }
+  .meet-inner .beacon{
+    transform:scale(var(--mk,1));
+    transform-origin:50% 50%;
+  }
+
+  /* 고위험 지정 — 카드 우측 상단, 차분한 색 */
+  .meet-card{ position:relative; padding-right:78px; }
+  .meet-risk{
+    position:absolute; top:9px; right:9px;
+    background:transparent; border:1px solid #3A4C57; border-radius:6px;
+    padding:4px 8px; font-family:inherit; font-size:10.5px; font-weight:700;
+    color:#8A9BA5; cursor:pointer; line-height:1.3;
+  }
+  .meet-risk:hover{ border-color:#5A6E7A; color:#C6D3D9; }
+  .meet-risk.on{
+    background:rgba(180,83,9,.22); border-color:#8A5A2B; color:#E0A86A;
+  }
   .meet-right{
     flex:0 0 400px; border-left:1px solid #24343D;
     overflow-y:auto; padding:16px; background:#121E25;
@@ -3066,7 +3084,7 @@ function renderMeet(){
       html += zoneHTML(z, coColor(w.company),
         { risk:w.risk, label:w.name, pointerNone:true });
     });
-    (w.marks || []).forEach(m => { html += markHTML(m, null, true); });
+    (w.marks || []).forEach(m => { html += markHTML(m, null, !meetZoomed()); });
   });
   const holder = document.createElement('div');
   holder.innerHTML = html;
@@ -3103,8 +3121,9 @@ function renderMeet(){
              (w.detail ? '<div class="de">'+esc(w.detail)+'</div>' : '') +
              (meta.length ? '<div class="mt">'+meta.join(' · ')+'</div>' : '') +
              '<button type="button" class="meet-risk'+(w.risk?' on':'')+'" ' +
+               'title="'+(w.risk?'고위험 해제':'고위험 작업으로 지정')+'" ' +
                'onclick="event.stopPropagation(); toggleRisk(\''+w.id+'\')">' +
-               (w.risk ? '🚨 고위험 지정됨 · 해제' : '고위험 작업 지정') + '</button>' +
+               (w.risk ? '고위험 ✓' : '고위험') + '</button>' +
              '</div>';
       });
     });
@@ -3160,14 +3179,20 @@ function renderMeet(){
 /* ── 회의 배치도 확대 ── */
 let meetZoom = { k:1, cx:50, cy:50 };
 
-function applyMeetZoom(){
+function meetZoomed(){ return meetZoom.k > 1.01; }
+
+function applyMeetZoom(redraw){
   const inner = document.getElementById('meetInner');
   inner.style.transformOrigin = meetZoom.cx + '% ' + meetZoom.cy + '%';
   inner.style.transform = 'scale(' + meetZoom.k + ')';
+  // 확대해도 글자·아이콘 크기는 그대로 유지
+  inner.style.setProperty('--mk', (1 / meetZoom.k).toFixed(4));
   const info = document.getElementById('meetZoomInfo');
-  info.textContent = meetZoom.k > 1.01
-    ? '🔍 약 ' + meetZoom.k.toFixed(1) + '배 확대 중 — 드래그로 다시 확대할 수 있습니다'
+  info.textContent = meetZoomed()
+    ? '🔍 약 ' + meetZoom.k.toFixed(1) + '배 확대 중 — 장비·인원 이름이 표시됩니다'
     : '배치도를 드래그하면 그 범위가 확대됩니다';
+  if (redraw !== false &&
+      document.getElementById('meetView').classList.contains('open')) renderMeet();
 }
 function meetResetZoom(){
   meetZoom = { k:1, cx:50, cy:50 };

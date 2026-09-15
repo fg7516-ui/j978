@@ -725,6 +725,99 @@
   .view{ display:none; }
   .view.on{ display:block; }
 
+  /* ===== DABs 회의 모드 (웹 전용) ===== */
+  .meet-btn{
+    display:none; width:100%; margin-bottom:14px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color:#fff; border:none; border-radius:14px;
+    padding:15px; font-family:inherit; font-size:16px; font-weight:800;
+    cursor:pointer; box-shadow:0 2px 10px rgba(20,79,52,.25);
+  }
+  .meet-btn .sub{ font-weight:600; font-size:12px; opacity:.85; margin-left:6px; }
+  .meet-btn:active{ filter:brightness(.95); }
+
+  .meet{
+    display:none; position:fixed; inset:0; z-index:90;
+    background:#0F1A20; color:#fff;
+    flex-direction:column;
+  }
+  .meet.open{ display:flex; }
+  .meet-head{
+    display:flex; align-items:center; gap:16px;
+    padding:12px 20px; border-bottom:1px solid #24343D;
+    background:#16242B; flex:0 0 auto;
+  }
+  .meet-head .ttl{ font-size:19px; font-weight:800; }
+  .meet-head .dt{ font-size:15px; font-weight:700; color:var(--accent); }
+  .meet-head .sp{ flex:1; }
+  .meet-head button{
+    background:#24343D; color:#fff; border:none; border-radius:9px;
+    padding:9px 15px; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer;
+  }
+  .meet-head button:hover{ background:#2E4250; }
+  .meet-head button.on{ background:var(--accent); }
+
+  .meet-body{ flex:1; display:flex; min-height:0; }
+  .meet-left{
+    flex:1; min-width:0; padding:16px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .meet-mapwrap{
+    position:relative; max-width:100%; max-height:100%;
+    border-radius:10px; overflow:hidden; border:1px solid #24343D;
+  }
+  .meet-mapwrap img{
+    display:block; max-width:100%; max-height:calc(100vh - 120px);
+    width:auto; height:auto;
+    -webkit-user-drag:none; user-select:none;
+  }
+  .meet-right{
+    flex:0 0 400px; border-left:1px solid #24343D;
+    overflow-y:auto; padding:16px; background:#121E25;
+  }
+  .meet-sec{
+    font-size:12px; font-weight:800; color:var(--accent);
+    margin:0 0 9px; letter-spacing:.5px;
+  }
+  .meet-sec:not(:first-child){ margin-top:22px; }
+  .meet-card{
+    background:#1A2B34; border:1px solid #24343D;
+    border-radius:10px; padding:11px 13px; margin-bottom:8px;
+    border-left:4px solid; cursor:pointer;
+  }
+  .meet-card:hover{ background:#22353F; }
+  .meet-card.on{ background:#22353F; box-shadow:0 0 0 2px rgba(232,80,15,.5) inset; }
+  .meet-card .co{ font-size:13px; font-weight:800; }
+  .meet-card .wk{ font-size:14px; font-weight:700; color:#fff; margin-top:3px; }
+  .meet-card .de{ font-size:11.5px; color:#9FB2BB; margin-top:4px; line-height:1.6; }
+  .meet-card .mt{ font-size:11px; color:#7C919C; margin-top:5px; }
+
+  .meet-row{
+    display:flex; gap:9px; font-size:11.5px; color:#C6D3D9;
+    padding:7px 0; border-bottom:1px solid #22353F; line-height:1.55;
+  }
+  .meet-row:last-child{ border-bottom:none; }
+  .meet-row .tm{ flex:0 0 46px; font-weight:800; color:#fff; }
+  .meet-row .gt{
+    flex:0 0 auto; font-size:9.5px; font-weight:800; color:#fff;
+    border-radius:4px; padding:1px 5px; height:16px; margin-top:1px;
+  }
+  .meet-empty{ font-size:12px; color:#7C919C; padding:10px 0; }
+  .meet-filter{
+    background:#1A2B34; border:1px solid var(--accent);
+    border-radius:10px; padding:9px 12px; margin-bottom:10px;
+    font-size:12px; font-weight:700; color:var(--accent);
+    display:flex; justify-content:space-between; align-items:center; cursor:pointer;
+  }
+
+  /* 데스크톱에서만 사용 */
+  @media (min-width: 901px){
+    .meet-btn{ display:block; }
+  }
+  @media (max-width: 900px){
+    .meet{ display:none !important; }
+  }
+
   /* 대시보드 지도는 클릭 감지를 지도 전체가 받음 */
   #viewMap{ cursor:pointer; }
   #viewMap .zone{ pointer-events:none; }
@@ -793,6 +886,10 @@
 
   <!-- ===== 대시보드 ===== -->
   <div class="view on" id="view-dash">
+    <button type="button" class="meet-btn" onclick="openMeet()">
+      🖥️ DABs 회의 실시 <span class="sub">전체화면으로 보기</span>
+    </button>
+
     <div class="mat-card">
       <div class="mh" onclick="openMatModal()" style="cursor:pointer">
         <div class="t">🚚 자재 반입 · 반출 계획</div>
@@ -1216,6 +1313,26 @@
     <div class="form-card">
       <button type="button" class="btn btn-main" onclick="downloadSoloPptx()" style="width:100%; padding:13px;">📑 PPT로 다운로드</button>
     </div>
+  </div>
+</div>
+
+<!-- DABs 회의 모드 (웹 전용) -->
+<div class="meet" id="meetView">
+  <div class="meet-head">
+    <span class="ttl">🖥️ DABs 회의</span>
+    <span class="dt" id="meetDate"></span>
+    <span class="sp"></span>
+    <span id="meetFloorBox"></span>
+    <button type="button" onclick="meetPick(null)" id="meetAllBtn">전체 업체</button>
+    <button type="button" onclick="closeMeet()">✕ 닫기</button>
+  </div>
+  <div class="meet-body">
+    <div class="meet-left">
+      <div class="meet-mapwrap" id="meetMap">
+        <img src="dabs-map.jpg" alt="작업구간 현황">
+      </div>
+    </div>
+    <div class="meet-right" id="meetSide"></div>
   </div>
 </div>
 
@@ -2871,6 +2988,140 @@ async function downloadDayPack(){
   }
 }
 
+/* ===================================================================
+   DABs 회의 모드 (웹 전용)
+   =================================================================== */
+let meetCo = null;   // 선택된 업체 (null = 전체)
+
+function openMeet(){
+  if (window.innerWidth <= 900){
+    alert('회의 모드는 PC 화면에서 사용할 수 있습니다.');
+    return;
+  }
+  meetCo = null;
+  document.getElementById('meetView').classList.add('open');
+  renderMeet();
+}
+function closeMeet(){
+  document.getElementById('meetView').classList.remove('open');
+}
+function meetPick(co){
+  meetCo = (meetCo === co) ? null : co;
+  renderMeet();
+}
+
+function renderMeet(){
+  const d = curDate();
+  const fl = document.getElementById('floorFilter').value;
+  const all = dashPool();
+  const works = meetCo ? all.filter(w => w.company === meetCo) : all;
+
+  document.getElementById('meetDate').textContent =
+    d + (fl ? ' · ' + fl : '') + (meetCo ? ' · ' + meetCo : '');
+  document.getElementById('meetAllBtn').classList.toggle('on', !meetCo);
+
+  /* ── 좌측 배치도 ── */
+  const map = document.getElementById('meetMap');
+  map.querySelectorAll('.zone, .eqmark').forEach(el => el.remove());
+  let html = '';
+  works.forEach(w => {
+    (w.zones || []).forEach(z => {
+      html += zoneHTML(z, coColor(w.company),
+        { risk:w.risk, label:w.name, pointerNone:true });
+    });
+    (w.marks || []).forEach(m => { html += markHTML(m, null, true); });
+  });
+  const holder = document.createElement('div');
+  holder.innerHTML = html;
+  while (holder.firstChild) map.appendChild(holder.firstChild);
+
+  /* ── 우측 패널 ── */
+  const side = document.getElementById('meetSide');
+  let s = '';
+
+  if (meetCo){
+    s += '<div class="meet-filter" onclick="meetPick(null)">' +
+         '<span>' + esc(meetCo) + ' 만 보는 중</span><span>✕ 전체</span></div>';
+  }
+
+  // 업체별 작업 현황
+  s += '<div class="meet-sec">업체별 작업 현황 (' + all.length + '건)</div>';
+  if (!all.length){
+    s += '<div class="meet-empty">등록된 작업이 없습니다.</div>';
+  } else {
+    COMPANIES.filter(c => all.some(w => w.company === c.name)).forEach(c => {
+      const list = all.filter(w => w.company === c.name);
+      const on = (meetCo === c.name);
+      list.forEach((w, i) => {
+        const meta = [];
+        if (w.start && w.end) meta.push(timeText(w));
+        if (w.count) meta.push('인원 ' + w.count + '명');
+        if ((w.floors||[]).length) meta.push(w.floors.join(','));
+        s += '<div class="meet-card' + (on ? ' on' : '') + '" ' +
+             'style="border-left-color:'+c.color+'" ' +
+             'onclick="meetPick(\''+c.name+'\')">' +
+             (i === 0 ? '<div class="co" style="color:'+c.color+'">'+c.name+
+                        ' · ' + list.length + '건</div>' : '') +
+             '<div class="wk">' + (w.risk ? '🚨 ' : '') + esc(w.name) + '</div>' +
+             (w.detail ? '<div class="de">'+esc(w.detail)+'</div>' : '') +
+             (meta.length ? '<div class="mt">'+meta.join(' · ')+'</div>' : '') +
+             '</div>';
+      });
+    });
+  }
+
+  // 자재 반입·반출
+  const mats = matsFor(d);
+  s += '<div class="meet-sec">자재 반입 · 반출 계획 (' + mats.length + '건)</div>';
+  if (!mats.length){
+    s += '<div class="meet-empty">등록된 자재 계획이 없습니다.</div>';
+  } else {
+    s += '<div class="meet-card" style="border-left-color:#1D4ED8; cursor:default; padding:4px 13px">';
+    mats.forEach(m => {
+      const g2 = (m.gate === '2GATE');
+      s += '<div class="meet-row">' +
+        '<span class="tm">'+esc(m.time)+'</span>' +
+        '<span class="gt" style="background:'+(g2?'#B45309':'#1D4ED8')+'">'+
+          esc(m.gate).replace('GATE','G')+'</span>' +
+        '<span>'+esc(m.company)+' · '+esc(m.material)+
+          (m.vehicle ? '<br>'+esc(m.vehicle) : '') +
+          (m.place ? ' · '+esc(m.place) : '') + '</span>' +
+      '</div>';
+    });
+    s += '</div>';
+  }
+
+  // 단독작업
+  const solos = solosFor(d);
+  s += '<div class="meet-sec">단독작업 현황 (' + solos.length + '명)</div>';
+  if (!solos.length){
+    s += '<div class="meet-empty">등록된 단독작업자가 없습니다.</div>';
+  } else {
+    const noCam = solos.filter(r => r.cam !== '지급').length;
+    if (noCam)
+      s += '<div class="meet-empty" style="color:#F87171; font-weight:700">' +
+           '⚠ 바디캠 미지급 ' + noCam + '명</div>';
+    s += '<div class="meet-card" style="border-left-color:#7C3AED; cursor:default; padding:4px 13px">';
+    solos.forEach(r => {
+      s += '<div class="meet-row">' +
+        '<span class="tm" style="flex:0 0 66px">'+esc(r.company)+'</span>' +
+        '<span>'+esc(r.name)+(r.job ? ' · '+esc(r.job) : '')+
+          '<br>'+esc(r.place)+
+          (r.age ? ' · '+esc(r.age) : '') +
+          ' · 바디캠 '+esc(r.cam)+'</span>' +
+      '</div>';
+    });
+    s += '</div>';
+  }
+
+  side.innerHTML = s;
+}
+
+/* ESC 로 닫기 */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMeet();
+});
+
 /* ---------- 관리 탭 잠금 ---------- */
 const ADMIN_PW = "rkdalstn";
 let adminUnlocked = false;
@@ -3739,6 +3990,7 @@ function render(){
   updateDateRole();
   renderMatBrief();
   renderSoloBrief();
+  if (document.getElementById('meetView').classList.contains('open')) renderMeet();
 
   // 대시보드는 층 필터 적용
   const fl = document.getElementById('floorFilter').value;

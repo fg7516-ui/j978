@@ -2679,7 +2679,7 @@ function packMap(d, works){
       res(cv);
     };
     img.onerror = () => rej(new Error('배치도 이미지를 불러오지 못했습니다.'));
-    img.src = 'dabs-map.jpg';
+    img.src = mapSrc(d);
   });
 }
 
@@ -3503,11 +3503,11 @@ function setHdec(which, name, phone){
 }
 
 /* ---------- 장비별 배치 인원 ---------- */
-let eqUnits = [];   // [{eq, no, opName, opPhone, sigName, guiName}]
+let eqUnits = [];   // [{eq, no, opName, sigName, guiName}]
 
 function addEqUnit(){
   if (!selEquip.length){ alert('먼저 사용 장비를 선택해 주세요.'); return; }
-  eqUnits.push({ eq: selEquip[0], no:'', opName:'', opPhone:'', sigName:'', guiName:'' });
+  eqUnits.push({ eq: selEquip[0], no:'', opName:'', sigName:'', guiName:'' });
   buildEqUnits();
 }
 function rmEqUnit(i){ eqUnits.splice(i,1); buildEqUnits(); }
@@ -3536,12 +3536,8 @@ function buildEqUnits(){
       '</div>' +
 
       '<span class="lbl">운전원 *</span>' +
-      '<div class="two-col">' +
-        '<input type="text" value="'+esc(u.opName)+'" placeholder="이름"' +
-        ' oninput="setUnit('+i+',\'opName\',this.value)">' +
-        '<input type="text" inputmode="tel" value="'+esc(u.opPhone)+'" placeholder="연락처"' +
-        ' oninput="setUnit('+i+',\'opPhone\',this.value)">' +
-      '</div>' +
+      '<input type="text" value="'+esc(u.opName)+'" placeholder="이름"' +
+      ' oninput="setUnit('+i+',\'opName\',this.value)">' +
 
       '<div class="two-col">' +
         '<div><span class="lbl"><span class="dotc sig"></span>신호수</span>' +
@@ -3573,7 +3569,8 @@ function applyDrawZoom(){
   const r = drawRect;
   const map = document.getElementById('drawMap');
   const inner = document.getElementById('drawInner');
-  map.style.paddingBottom = ((r.h * MAP_H) / (r.w * MAP_W) * 100).toFixed(3) + '%';
+  const mp = mapFor();
+  map.style.paddingBottom = ((r.h * mp.h) / (r.w * mp.w) * 100).toFixed(3) + '%';
   inner.style.width  = (100 / r.w * 100).toFixed(3) + '%';
   inner.style.height = (100 / r.h * 100).toFixed(3) + '%';
   inner.style.left   = (-r.x / r.w * 100).toFixed(3) + '%';
@@ -3813,13 +3810,13 @@ function fillForm(w){
   setHdec('sup',  (w.hSup  || {}).name, (w.hSup  || {}).phone);
   setHdec('safe', (w.hSafe || {}).name, (w.hSafe || {}).phone);
   if (Array.isArray(w.units) && w.units.length){
-    eqUnits = w.units.map(u => Object.assign({eq:'',no:'',opName:'',opPhone:'',sigName:'',guiName:''}, u));
+    eqUnits = w.units.map(u => Object.assign({eq:'',no:'',opName:'',sigName:'',guiName:''}, u));
   } else if ((w.oper && w.oper.name) || w.sigName || w.guiName){
     // 이전 방식으로 저장된 작업 — 한 대로 옮겨 담음
     eqUnits = [{
       eq: (w.equip || [])[0] || '',
       no: '',
-      opName: (w.oper||{}).name || '', opPhone: (w.oper||{}).phone || '',
+      opName: (w.oper||{}).name || '',
       sigName: w.sigName || '', guiName: w.guiName || ''
     }];
   } else {
@@ -3951,7 +3948,7 @@ function saveWork(){
     hSafe: hdecValue('safe'),
     units: eqUnits.map(u => ({
       eq: u.eq, no: (u.no||'').trim(),
-      opName: (u.opName||'').trim(), opPhone: (u.opPhone||'').trim(),
+      opName: (u.opName||'').trim(),
       sigName: (u.sigName||'').trim(), guiName: (u.guiName||'').trim()
     })),
     detail: document.getElementById('fDetail').value.trim(),
@@ -4094,8 +4091,7 @@ function exportDay(){
     if (w.hSafe && w.hSafe.name)
       txt += '   안전관리자(HDEC): ' + w.hSafe.name + (w.hSafe.phone ? ' ' + w.hSafe.phone : '') + '\n';
     (w.units || []).forEach(u => {
-      txt += '   ' + eqShort(u.eq) + (u.no ? ' ' + u.no : '') + ' — 운전원 ' + u.opName +
-             (u.opPhone ? ' ' + u.opPhone : '');
+      txt += '   ' + eqShort(u.eq) + (u.no ? ' ' + u.no : '') + ' — 운전원 ' + u.opName;
       if (u.sigName) txt += ' / 신호수 ' + u.sigName;
       if (u.guiName) txt += ' / 유도원 ' + u.guiName;
       txt += '\n';
@@ -4120,6 +4116,7 @@ function render(){
   const all = store[d] || [];
 
   updateDateRole();
+  syncMapImages();
   renderMatBrief();
   renderSoloBrief();
   if (document.getElementById('meetView').classList.contains('open')) renderMeet();
@@ -4281,7 +4278,7 @@ function miniMap(works, dot){
     });
   });
   if (dot) z += '<div class="tapdot" style="left:'+dot.x+'%; top:'+dot.y+'%;"></div>';
-  return '<div class="map-wrap"><img src="dabs-map.jpg" alt="작업구간">' + z + '</div>';
+  return '<div class="map-wrap"><img src="'+mapSrc()+'" alt="작업구간">' + z + '</div>';
 }
 
 /* 작업 카드 HTML (모달 안에서 사용 — 클릭/삭제 없음) */
@@ -4311,10 +4308,7 @@ function crewRow(w){
   if (us.length){
     out += '<div style="margin-top:8px">' + us.map(u => {
       const bits = [];
-      if (u.opName){
-        bits.push('운전원 <b>'+esc(u.opName)+'</b>' +
-          (u.opPhone ? ' <a href="tel:'+esc(u.opPhone).replace(/[^0-9+]/g,'')+'">'+esc(u.opPhone)+'</a>' : ''));
-      }
+      if (u.opName) bits.push('운전원 <b>'+esc(u.opName)+'</b>');
       if (u.sigName) bits.push('신호수 <b>'+esc(u.sigName)+'</b>');
       if (u.guiName) bits.push('유도원 <b>'+esc(u.guiName)+'</b>');
       return '<div class="unit-line">' +
@@ -4354,7 +4348,26 @@ function workCardHTML(w){
 }
 
 /* 대시보드 지도 — 탭하면 그 지점 작업, 드래그하면 범위 확대 */
-const MAP_W = 1600, MAP_H = 1067;   // dabs-map.jpg 원본 비율
+/* 날짜별 현장 배치도 — 2026-09-17 부터 새 배치도 적용 */
+const MAPS = [
+  { from:'2026-09-17', src:'dabs-map2.jpg', w:1108, h:727 },
+  { from:'0000-00-00', src:'dabs-map.jpg',  w:1600, h:1067 }
+];
+function mapFor(d){
+  d = d || curDate();
+  return MAPS.find(m => d >= m.from) || MAPS[MAPS.length - 1];
+}
+function mapSrc(d){ return mapFor(d).src; }
+/* 화면에 붙어 있는 배치도 이미지를 현재 날짜에 맞게 교체 */
+function syncMapImages(){
+  const src = mapSrc();
+  ['viewMap','drawMap','meetMap'].forEach(id => {
+    const box = document.getElementById(id);
+    if (!box) return;
+    const img = box.querySelector('img');
+    if (img && !img.src.endsWith(src)) img.setAttribute('src', src);
+  });
+}
 
 function dashPool(){
   const fl = document.getElementById('floorFilter').value;
@@ -4364,8 +4377,9 @@ function dashPool(){
 
 /* 선택 범위를 확대해 보여주는 HTML */
 function zoomMap(r, works){
-  const pad = (r.h * MAP_H) / (r.w * MAP_W) * 100;   // 잘라낸 영역 비율
-  let inner = '<img src="dabs-map.jpg" alt="확대 배치도">';
+  const mp = mapFor();
+  const pad = (r.h * mp.h) / (r.w * mp.w) * 100;   // 잘라낸 영역 비율
+  let inner = '<img src="'+mp.src+'" alt="확대 배치도">';
   works.forEach(w => {
     (w.marks || []).forEach(m => { inner += markHTML(m, null); });   // 확대 시 신호수·유도원까지
     (w.zones || []).forEach(z => {

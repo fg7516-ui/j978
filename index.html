@@ -42,6 +42,8 @@
     --forest-deep:#144F34;
     --plum:#8E3B6B;
     --plum-deep:#6A2A4F;
+    --steel:#2B5F8F;
+    --steel-deep:#1D4266;
   }
 
   *{ box-sizing:border-box; }
@@ -146,6 +148,7 @@
   .tile.brown{ background: linear-gradient(135deg, var(--brown), var(--brown-deep)); }
   .tile.forest{ background: linear-gradient(135deg, var(--forest), var(--forest-deep)); }
   .tile.plum{ background: linear-gradient(135deg, var(--plum), var(--plum-deep)); }
+  .tile.steel{ background: linear-gradient(135deg, var(--steel), var(--steel-deep)); }
 
   /* expandable choice panel (온열질환 / 심정지) */
   .choices{
@@ -290,6 +293,16 @@ setTimeout(hideIntro, 3300);
         <div class="txt">
           <div class="title">👛 안전지갑</div>
           <div class="sub">安全钱包 · Ví an toàn</div>
+        </div>
+        <div class="arrow">↗</div>
+      </div>
+    </a>
+
+    <a class="tile steel" href="checklist.html" target="_blank" rel="noopener">
+      <div class="row">
+        <div class="txt">
+          <div class="title">📋 현장 지정구역 점검</div>
+          <div class="sub">지정구역 체크리스트 · 새 창에서 열림</div>
         </div>
         <div class="arrow">↗</div>
       </div>

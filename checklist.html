@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>현장 지정구역 점검 체크리스트 · 더현대광주 신축공사</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+  :root{
+    --bg:#FFF7F1; --ink:#201712; --ink-soft:#5B4C43; --line:#EADACC; --card:#fff;
+    --accent:#2B5F8F; --accent-deep:#1D4266;
+    --red:#C21F2A; --orange:#D97706; --green:#15803D;
+    --navh:64px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom));
+  }
+  .wrap{ max-width:720px; margin:0 auto; padding:0 16px 30px; }
+
+  .back-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:14px; padding:7px 13px; border-radius:99px;
+    background:#F3ECE4; color:var(--ink);
+    font-size:12.5px; font-weight:700; text-decoration:none;
+  }
+  h1{ font-size:20px; font-weight:800; margin:12px 0 2px; }
+  .page-sub{ font-size:12px; color:var(--ink-soft); margin:0 0 16px; }
+  h2{ font-size:15px; font-weight:800; margin:20px 0 8px; }
+  h2:first-of-type{ margin-top:4px; }
+  .msec{ font-size:12.5px; font-weight:800; color:var(--ink-soft); margin:18px 0 8px; }
+  .hint{ font-size:12px; color:var(--ink-soft); margin:0 0 10px; line-height:1.6; }
+
+  .sync-note{ font-size:11.5px; padding:8px 12px; border-radius:10px; margin-bottom:14px; line-height:1.5; }
+  .sync-note.local{ background:#FFF0E6; border:1px solid #FFD9BD; color:#B8380A; }
+  .sync-note.live{ background:#E8F6EE; border:1px solid #B8E3CA; color:#146640; }
+
+  .datebar{
+    display:flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:10px 12px; margin-bottom:12px;
+  }
+  .datebar button{
+    background:#F3ECE4; border:none; border-radius:10px;
+    padding:8px 12px; font-size:14px; font-weight:700;
+    font-family:inherit; cursor:pointer; color:var(--ink);
+  }
+  .datebar input[type=date]{
+    flex:1; min-width:0; border:none; background:transparent;
+    font-family:inherit; font-size:15px; font-weight:700; color:var(--ink); text-align:center;
+  }
+
+  /* 폼 */
+  .form-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .field{ margin-bottom:14px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
+  .field input[type=text], .field select, .field textarea{
+    width:100%; border:1px solid var(--line); border-radius:10px;
+    padding:11px 12px; font-family:inherit; font-size:14.5px;
+    background:#FFFDFB; color:var(--ink);
+  }
+  .field textarea{ resize:vertical; min-height:70px; }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  .seg{ display:flex; gap:8px; }
+  .seg button{
+    flex:1; border:2px solid var(--line); background:#fff;
+    border-radius:10px; padding:12px; cursor:pointer;
+    font-family:inherit; font-size:14px; font-weight:800; color:#9C8E84;
+  }
+  .seg button.on{ background:var(--accent); border-color:var(--accent-deep); color:#fff; }
+
+  .btn{ border:none; border-radius:10px; padding:11px 15px;
+        font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; }
+  .btn-main{ background:var(--accent); color:#fff; }
+  .btn-ghost{ background:#F3ECE4; color:var(--ink); }
+  .btn-danger{ background:#FBE9EA; color:#A3151F; }
+
+  /* 체크리스트 */
+  .grp{ margin-top:18px; }
+  .grp-h{
+    background:var(--accent); color:#fff; border-radius:10px 10px 0 0;
+    padding:9px 13px; font-size:13px; font-weight:800;
+  }
+  .sub-h{
+    background:#EDF2F7; color:var(--accent-deep);
+    padding:7px 13px; font-size:12px; font-weight:800;
+    border-left:1px solid var(--line); border-right:1px solid var(--line);
+  }
+  .ck{
+    background:var(--card); border:1px solid var(--line); border-top:none;
+    padding:12px 13px;
+  }
+  .ck .q{ font-size:13.5px; line-height:1.6; margin-bottom:9px; }
+  .ck .q b{ color:var(--accent); margin-right:5px; }
+  .ox{ display:flex; gap:7px; }
+  .ox button{
+    flex:1; border:1.5px solid var(--line); background:#fff;
+    border-radius:9px; padding:9px; cursor:pointer;
+    font-family:inherit; font-size:13px; font-weight:800; color:#9C8E84;
+  }
+  .ox button.o.on{ background:var(--green); border-color:var(--green); color:#fff; }
+  .ox button.x.on{ background:var(--red); border-color:var(--red); color:#fff; }
+  .ox button.n.on{ background:#6B7A82; border-color:#6B7A82; color:#fff; }
+
+  .xbox{ display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .xbox.on{ display:block; }
+  .photo-add{
+    display:block; width:100%; text-align:center;
+    border:1.5px dashed var(--line); border-radius:10px;
+    padding:12px; background:#FFFDFB; cursor:pointer;
+    font-size:12.5px; font-weight:700; color:var(--ink-soft); font-family:inherit;
+  }
+  .thumbs{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .thumb{ position:relative; width:76px; height:76px; }
+  .thumb img{ width:100%; height:100%; object-fit:cover; border-radius:9px; border:1px solid var(--line); }
+  .thumb button{
+    position:absolute; top:-7px; right:-7px; width:22px; height:22px; border-radius:50%;
+    background:#111; color:#fff; border:2px solid #fff; font-size:12px;
+    cursor:pointer; font-family:inherit; padding:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* 목록 */
+  .rec{
+    background:var(--card); border:1px solid var(--line);
+    border-left:6px solid var(--line);
+    border-radius:13px; padding:13px 15px; margin-bottom:10px; cursor:pointer;
+  }
+  .rec.red{ border-left-color:var(--red); }
+  .rec.orange{ border-left-color:var(--orange); }
+  .rec.green{ border-left-color:var(--green); }
+  .rec .rt{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .rec .slot{ font-size:15px; font-weight:800; }
+  .rec .who{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
+  .rec .badge{
+    font-size:10.5px; font-weight:800; border-radius:6px;
+    padding:3px 8px; white-space:nowrap;
+  }
+  .badge.red{ background:#FBE9EA; color:#A3151F; }
+  .badge.orange{ background:#FEF3E2; color:#8A4A08; }
+  .badge.green{ background:#E6F4EC; color:#146640; }
+  .badge.gray{ background:#F1EDE8; color:#6B7A82; }
+  .rec .sum{ font-size:12px; color:var(--ink-soft); margin-top:8px; }
+
+  .empty{
+    text-align:center; padding:28px 16px; color:var(--ink-soft); font-size:13.5px;
+    background:var(--card); border:1px dashed var(--line); border-radius:14px;
+  }
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .stat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; }
+  .stat .n{ font-size:20px; font-weight:800; }
+  .stat .l{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+  .stat.red .n{ color:var(--red); }
+  .stat.orange .n{ color:var(--orange); }
+  .stat.green .n{ color:var(--green); }
+
+  /* 조치 상세 */
+  .act{
+    background:var(--card); border:1px solid var(--line);
+    border-left:5px solid var(--red); border-radius:12px;
+    padding:13px 15px; margin-bottom:10px;
+  }
+  .act.orange{ border-left-color:var(--orange); }
+  .act.green{ border-left-color:var(--green); }
+  .act .aq{ font-size:13.5px; font-weight:700; line-height:1.6; }
+  .act .ai{ font-size:11.5px; color:var(--ink-soft); margin-top:6px; }
+  .act .ph{ display:flex; flex-wrap:wrap; gap:8px; margin-top:9px; }
+  .act .ph img{ width:88px; height:88px; object-fit:cover; border-radius:9px; border:1px solid var(--line); cursor:pointer; }
+  .act .ph .cap{ font-size:10px; color:var(--ink-soft); text-align:center; margin-top:3px; }
+  .deadline{ font-size:11.5px; font-weight:800; margin-top:8px; }
+  .deadline.over{ color:var(--red); }
+  .deadline.ok{ color:var(--green); }
+
+  .lightbox{ display:none; position:fixed; inset:0; z-index:70; background:rgba(10,6,4,.92);
+    align-items:center; justify-content:center; padding:20px; }
+  .lightbox.open{ display:flex; }
+  .lightbox img{ max-width:100%; max-height:88vh; border-radius:10px; }
+
+  .lock-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:26px 20px; text-align:center; }
+  .lock-card .ico{ font-size:34px; }
+  .lock-card h3{ font-size:16px; font-weight:800; margin:12px 0 6px; }
+  .lock-card p{ font-size:12.5px; color:var(--ink-soft); margin:0 0 16px; line-height:1.6; }
+  .lock-card input{
+    width:100%; max-width:260px; text-align:center; border:1px solid var(--line);
+    border-radius:10px; padding:12px; font-family:inherit; font-size:15px;
+    background:#FFFDFB; color:var(--ink); margin-bottom:10px;
+  }
+  .lock-card .err{ font-size:12.5px; color:#A3151F; font-weight:700; margin-bottom:10px; display:none; }
+  .lock-card .err.on{ display:block; }
+  .admin-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .admin-card h3{ font-size:14px; font-weight:800; margin:0 0 6px; }
+  .admin-card p{ font-size:12.5px; color:var(--ink-soft); margin:0 0 12px; line-height:1.6; }
+
+  .tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background:rgba(255,255,255,.96); backdrop-filter:blur(8px);
+    border-top:1px solid var(--line); display:flex;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tabbar button{
+    flex:1; border:none; background:none; cursor:pointer; font-family:inherit;
+    padding:9px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--ink-soft); font-size:11px; font-weight:700;
+  }
+  .tabbar button .ic{ font-size:19px; line-height:1; }
+  .tabbar button.on{ color:var(--accent); }
+  .view{ display:none; }
+  .view.on{ display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-btn" href="index.html">← 메인으로</a>
+  <h1>현장 지정구역 점검 체크리스트</h1>
+  <p class="page-sub">더현대광주 신축공사</p>
+
+  <div class="sync-note local" id="syncNote">이 기기에만 저장되는 중입니다.</div>
+
+  <div class="datebar">
+    <button type="button" onclick="shiftDay(-1)">‹</button>
+    <input type="date" id="theDate" onchange="render()">
+    <button type="button" onclick="goToday()">오늘</button>
+    <button type="button" onclick="shiftDay(1)">›</button>
+  </div>
+
+  <!-- ===== 점검 현황 ===== -->
+  <div class="view on" id="view-list">
+    <div class="stats">
+      <div class="stat"><div class="n" id="stTotal">0</div><div class="l">점검 건수</div></div>
+      <div class="stat red"><div class="n" id="stRed">0</div><div class="l">미조치</div></div>
+      <div class="stat green"><div class="n" id="stGreen">0</div><div class="l">조치완료</div></div>
+    </div>
+    <h2>점검 현황</h2>
+    <p class="hint">부적합(X) 항목의 조치 상태에 따라 색으로 표시됩니다.<br>
+      <span style="color:var(--red); font-weight:700">빨강</span> 미조치 ·
+      <span style="color:var(--orange); font-weight:700">주황</span> 조치예정일 등록 ·
+      <span style="color:var(--green); font-weight:700">초록</span> 조치완료</p>
+    <div id="recList"></div>
+  </div>
+
+  <!-- ===== 점검 작성 ===== -->
+  <div class="view" id="view-new">
+    <h2>점검 정보</h2>
+    <div class="form-card">
+      <div class="field">
+        <label>점검공구 *</label>
+        <div class="seg" id="gongguSeg">
+          <button type="button" class="on" onclick="pickGonggu('1공구')">1공구</button>
+          <button type="button" onclick="pickGonggu('2공구')">2공구</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>점검시간 *</label>
+        <select id="fSlot" onchange="fillInspectors()"></select>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label>점검자 1 *</label>
+          <select id="fIns1"></select>
+        </div>
+        <div class="field">
+          <label>점검자 2</label>
+          <select id="fIns2"></select>
+        </div>
+      </div>
+      <p class="hint" id="schedHint" style="margin:0"></p>
+    </div>
+
+    <h2>점검 항목</h2>
+    <p class="hint">부적합(X) 선택 시 조치 전 사진을 올려 주세요.</p>
+    <div id="ckList"></div>
+
+    <div class="form-card" style="margin-top:16px">
+      <div class="field">
+        <label>기타의견 (고위험 작업 점검 및 부적합 내용)</label>
+        <textarea id="fEtc" placeholder="필요 시 작성"></textarea>
+      </div>
+      <div class="field">
+        <button type="button" class="btn btn-main" id="saveBtn" onclick="saveRecord()"
+                style="width:100%; padding:14px; font-size:15px">점검 등록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 조치 상세 ===== -->
+  <div class="view" id="view-detail">
+    <button type="button" class="btn btn-ghost" onclick="go('list')" style="margin-bottom:12px">← 목록으로</button>
+    <div id="detailBody"></div>
+  </div>
+
+  <!-- ===== 관리 ===== -->
+  <div class="view" id="view-admin">
+    <div id="adminLock">
+      <div class="lock-card">
+        <div class="ico">🔒</div>
+        <h3>관리자 인증</h3>
+        <p>점검 기록 삭제 등 관리 기능은<br>비밀번호 입력 후 사용할 수 있습니다.</p>
+        <input type="password" id="pwInput" placeholder="비밀번호"
+               onkeydown="if(event.key==='Enter') tryUnlock()">
+        <div class="err" id="pwErr">비밀번호가 올바르지 않습니다.</div>
+        <button type="button" class="btn btn-main" onclick="tryUnlock()">확인</button>
+      </div>
+    </div>
+    <div id="adminBody" style="display:none">
+      <div class="admin-card">
+        <h3>📡 실시간 연동 상태</h3>
+        <p id="adminSync">확인 중...</p>
+      </div>
+      <div class="admin-card">
+        <h3>📤 텍스트로 내보내기</h3>
+        <p>선택한 날짜의 점검 결과를 복사해 보고용으로 붙여넣을 수 있습니다.</p>
+        <button type="button" class="btn btn-ghost" onclick="exportDay()">이 날짜 점검 복사하기</button>
+      </div>
+      <div class="admin-card">
+        <h3>🗓 이 날짜 점검 전체 삭제</h3>
+        <p>선택한 날짜의 점검 기록을 모두 지웁니다. 되돌릴 수 없습니다.</p>
+        <button type="button" class="btn btn-danger" onclick="clearDay()">이 날짜 전체 삭제</button>
+      </div>
+      <div class="admin-card">
+        <h3>🔒 관리 화면 잠그기</h3>
+        <p>다시 잠그면 비밀번호를 입력해야 합니다.</p>
+        <button type="button" class="btn btn-ghost" onclick="lockAdmin()">관리 화면 잠그기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lbImg" src="" alt="">
+</div>
+
+<nav class="tabbar">
+  <button type="button" class="on" data-v="list" onclick="go('list')"><span class="ic">📋</span>점검현황</button>
+  <button type="button" data-v="new" onclick="go('new')"><span class="ic">✍️</span>점검작성</button>
+  <button type="button" data-v="admin" onclick="go('admin')"><span class="ic">⚙️</span>관리</button>
+</nav>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCdXaaHiwnEOKOIvrmWvSErdWnPgJ19e8c",
+  authDomain: "j978-54440.firebaseapp.com",
+  databaseURL: "https://j978-54440-default-rtdb.firebaseio.com",
+  projectId: "j978-54440",
+  storageBucket: "j978-54440.firebasestorage.app",
+  messagingSenderId: "981675387856",
+  appId: "1:981675387856:web:f4967e3b8c0c11f59d27d5"
+};
+const ADMIN_PW = "rkdalstn";
+const ACTION_HOURS = 2;          // 조치 기한(시간)
+
+const SCHEDULE = {"08:00~09:00":{"1공구":{"월":["김영재","김수민"],"화":["양형석","전준엽"],"수":["이호진","전창희"],"목":["오정현","임현우"],"금":["변형곤","이도현"],"토":["구기원","조성민"]},"2공구":{"월":["임성락","권준혁"],"화":["김보현","신익철"],"수":["김태화","우은희"],"목":["이임수","정우성"],"금":["황보영일","김현진"],"토":["이동건","조병남"]}},"10:00~11:00":{"1공구":{"월":["변형곤","이도현"],"화":["구기원","조성민"],"수":["장현승","나태양"],"목":["유장훈","전건우"],"금":["안재홍","임광섭"],"토":["김영재","김수민"]},"2공구":{"월":["황보영일","김현진"],"화":["이동건","조병남"],"수":["이정우","박재형"],"목":["최영상","최동수"],"금":["강민수","박휘"],"토":["임성락","권준혁"]}},"11:00~12:00":{"1공구":{"월":["안재홍","임광섭"],"화":["김영재","김수민"],"수":["양형석","전준엽"],"목":["이호진","전창희"],"금":["오정현","임현우"],"토":["변형곤","이도현"]},"2공구":{"월":["강민수","박휘"],"화":["임성락","권준혁"],"수":["김보현","신익철"],"목":["김태화","우은희"],"금":["이임수","정우성"],"토":["황보영일","김현진"]}},"13:00~14:00":{"1공구":{"월":["오정현","임현우"],"화":["변형곤","이도현"],"수":["구기원","조성민"],"목":["장현승","나태양"],"금":["유장훈","전건우"],"토":["안재홍","임광섭"]},"2공구":{"월":["이임수","정우성"],"화":["황보영일","김현진"],"수":["이동건","조병남"],"목":["이정우","박재형"],"금":["최영상","최동수"],"토":["강민수","박휘"]}},"14:00~15:00":{"1공구":{"월":["유장훈","전건우"],"화":["안재홍","임광섭"],"수":["김영재","김수민"],"목":["양형석","전준엽"],"금":["이호진","전창희"],"토":["오정현","임현우"]},"2공구":{"월":["최영상","최동수"],"화":["강민수","박휘"],"수":["임성락","권준혁"],"목":["김보현","신익철"],"금":["김태화","우은희"],"토":["이임수","정우성"]}},"15:00~16:00":{"1공구":{"월":["이호진","전창희"],"화":["오정현","임현우"],"수":["변형곤","이도현"],"목":["구기원","조성민"],"금":["장현승","나태양"],"토":["유장훈","전건우"]},"2공구":{"월":["김태화","우은희"],"화":["이임수","정우성"],"수":["황보영일","김현진"],"목":["이동건","조병남"],"금":["이정우","박재형"],"토":["최영상","최동수"]}},"16:00~17:00":{"1공구":{"월":["장현승","나태양"],"화":["유장훈","전건우"],"수":["안재홍","임광섭"],"목":["김영재","김수민"],"금":["양형석","전준엽"],"토":["이호진","전창희"]},"2공구":{"월":["이정우","박재형"],"화":["최영상","최동수"],"수":["강민수","박휘"],"목":["임성락","권준혁"],"금":["김보현","신익철"],"토":["김태화","우은희"]}}};
+const CHECK_ITEMS = [{"g":"토공사","s":"출입통제","items":["작업구간 출입통제 및 관계자 외 출입금지 조치 여부","굴착구간, 장비작업구역별 출입통제를 위한 유도자 배치 여부","건설장비와 근로자 이동동선 분리 여부","덤프트럭 과적, 적재불량 및 낙하물 방지조치 여부"]},{"g":"토공사","s":"사면 및 소단","items":["굴착면 붕괴, 균열, 토사 유실 등 이상 유무","토질 및 굴착 깊이에 적합한 법면 기울기 확보 여부 (토사 1:1, 암 1:0.5)","굴착부 상부 토사·자재·장비 적치로 인한 붕괴 위험 여부"]},{"g":"토공사","s":"지하수 배출","items":["우천 및 지하수 유입에 대비한 배수로·집수정·양수시설 상태"]},{"g":"토공사","s":"계측","items":["흙막이 구간 배부름 등 이상징후 현장 확인"]},{"g":"철골공사","s":"크레인설치","items":["철골 설치작업 관리책임자 및 신호수 지정 여부","크레인 정격하중 및 작업능력 적정 여부","지반 상태, 수평 상태 및 아웃트리거 설치 적정 여부","크레인 작업반경 내 근로자 출입통제 여부"]},{"g":"철골공사","s":"양중","items":["마모, 소선절단, 변형 등 손상 여부","샤클, 훅, 슬링벨트 등 사용 전 점검 여부","철골 부재 형상·중량에 적합한 줄걸이 방법 적용 여부","신호수와 운전원 간 신호방법 통일 및 명확한 전달 여부"]},{"g":"철골공사","s":"철골 설치","items":["철골부재 및 자재의 전도·낙하 방지조치 여부","철골 설치 중 전도방지를 위한 임시볼트·가새 등 설치 여부","고소작업 시 안전대 부착설비 및 추락방지시설 설치 여부","가조립 볼트 체결 확인, 공도구 낙하 방지걸이 체결 여부 확인","고소작업차 이동 동선 경사도 및 지반 안전성 확인"]},{"g":"철골공사","s":"용접","items":["용접작업 중 불티 비산 방지 조치 상태 확인","용접작업 주변 인화물질 보양 및 화재 감시자, 소화기 배치 상태 확인"]}];
+
+const DAYS = ['일','월','화','수','목','금','토'];
+const COMPANIES = ["현대건설","신영토건","영신디엔씨","약동산업","대주중공업","에스엠파워텍","엘림","만경"];
+
+let recs = {};            // { key: record }
+let recRef = null;
+let gonggu = '1공구';
+let answers = {};         // { idx: {r, photos:[]} }
+let adminUnlocked = false;
+let curKey = null;
+
+/* ---------- 공통 ---------- */
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function dStr(dt){ return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function todayStr(){ return dStr(new Date()); }
+function curDate(){ return document.getElementById('theDate').value || todayStr(); }
+function goToday(){ document.getElementById('theDate').value = todayStr(); render(); }
+function shiftDay(n){
+  const d = new Date(curDate() + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  document.getElementById('theDate').value = dStr(d);
+  render();
+}
+function fmtTime(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = n => String(n).padStart(2,'0');
+  return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function go(v){
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('on'));
+  document.getElementById('view-' + v).classList.add('on');
+  document.querySelectorAll('.tabbar button').forEach(b =>
+    b.classList.toggle('on', b.dataset.v === v));
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* ---------- 항목 번호 ---------- */
+const FLAT = [];
+CHECK_ITEMS.forEach(b => b.items.forEach(q => FLAT.push({ g:b.g, s:b.s, q:q })));
+
+/* ---------- 점검 작성 ---------- */
+function pickGonggu(g){
+  gonggu = g;
+  document.querySelectorAll('#gongguSeg button').forEach(b =>
+    b.classList.toggle('on', b.textContent === g));
+  fillInspectors();
+}
+function buildSlots(){
+  document.getElementById('fSlot').innerHTML =
+    Object.keys(SCHEDULE).map(s => '<option value="'+s+'">'+s+'</option>').join('');
+}
+function fillInspectors(){
+  const slot = document.getElementById('fSlot').value;
+  const day = DAYS[new Date(curDate() + 'T00:00:00').getDay()];
+  const assigned = ((SCHEDULE[slot] || {})[gonggu] || {})[day] || [];
+
+  const all = new Set();
+  Object.keys(SCHEDULE).forEach(s => ['1공구','2공구'].forEach(g =>
+    Object.values(SCHEDULE[s][g] || {}).forEach(a => a.forEach(n => all.add(n)))));
+  const list = [...all].sort();
+
+  [['fIns1', assigned[0]], ['fIns2', assigned[1]]].forEach(([id, pre], i) => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = (i ? '<option value="">선택 안 함</option>' : '') +
+      list.map(n => '<option value="'+n+'">'+n+'</option>').join('');
+    if (pre) sel.value = pre;
+  });
+
+  document.getElementById('schedHint').textContent = assigned.length
+    ? day + '요일 ' + slot + ' ' + gonggu + ' 배정: ' + assigned.join(', ')
+    : '해당 요일·시간에 배정된 점검자가 없습니다. 직접 선택해 주세요.';
+}
+
+function buildChecklist(){
+  let html = '', n = 0, lastG = '', lastS = '';
+  CHECK_ITEMS.forEach(b => {
+    if (b.g !== lastG){ html += (lastG ? '</div>' : '') + '<div class="grp"><div class="grp-h">'+b.g+'</div>'; lastG = b.g; lastS = ''; }
+    if (b.s !== lastS){ html += '<div class="sub-h">'+b.s+'</div>'; lastS = b.s; }
+    b.items.forEach(q => {
+      const i = n++;
+      html += '<div class="ck">' +
+        '<div class="q"><b>'+(i+1)+'.</b>'+esc(q)+'</div>' +
+        '<div class="ox">' +
+          '<button type="button" class="o" id="o'+i+'" onclick="setAns('+i+',\'O\')">O</button>' +
+          '<button type="button" class="x" id="x'+i+'" onclick="setAns('+i+',\'X\')">X</button>' +
+          '<button type="button" class="n" id="n'+i+'" onclick="setAns('+i+',\'N/A\')">N/A</button>' +
+        '</div>' +
+        '<div class="xbox" id="xb'+i+'">' +
+          '<button type="button" class="photo-add" onclick="document.getElementById(\'pf'+i+'\').click()">' +
+            '📷 조치 전 사진 추가</button>' +
+          '<input type="file" id="pf'+i+'" accept="image/*" multiple style="display:none" ' +
+            'onchange="pickPhoto(event,'+i+')">' +
+          '<div class="thumbs" id="th'+i+'"></div>' +
+        '</div>' +
+      '</div>';
+    });
+  });
+  html += '</div>';
+  document.getElementById('ckList').innerHTML = html;
+}
+function setAns(i, r){
+  if (!answers[i]) answers[i] = { r:'', photos:[] };
+  answers[i].r = (answers[i].r === r) ? '' : r;
+  ['o','x','n'].forEach(k => document.getElementById(k+i).classList.remove('on'));
+  if (answers[i].r === 'O') document.getElementById('o'+i).classList.add('on');
+  if (answers[i].r === 'X') document.getElementById('x'+i).classList.add('on');
+  if (answers[i].r === 'N/A') document.getElementById('n'+i).classList.add('on');
+  document.getElementById('xb'+i).classList.toggle('on', answers[i].r === 'X');
+}
+
+/* 사진 */
+function shrink(file, cb){
+  const rd = new FileReader();
+  rd.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1000;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX){
+        if (w > h){ h = Math.round(h*MAX/w); w = MAX; } else { w = Math.round(w*MAX/h); h = MAX; }
+      }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(cv.toDataURL('image/jpeg', 0.65));
+    };
+    img.onerror = () => alert('사진을 읽을 수 없습니다.');
+    img.src = rd.result;
+  };
+  rd.onerror = () => alert('사진을 읽을 수 없습니다.');
+  rd.readAsDataURL(file);
+}
+function pickPhoto(e, i){
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!answers[i]) answers[i] = { r:'X', photos:[] };
+  files.forEach(f => {
+    if (answers[i].photos.length >= 3) return;
+    shrink(f, url => { answers[i].photos.push(url); drawThumbs(i); });
+  });
+}
+function drawThumbs(i){
+  document.getElementById('th'+i).innerHTML =
+    (answers[i].photos || []).map((p,k) =>
+      '<div class="thumb"><img src="'+p+'" alt="">' +
+      '<button type="button" onclick="rmPhoto('+i+','+k+')">×</button></div>').join('');
+}
+function rmPhoto(i,k){ answers[i].photos.splice(k,1); drawThumbs(i); }
+
+/* 저장 */
+function saveRecord(){
+  const slot = document.getElementById('fSlot').value;
+  const i1 = document.getElementById('fIns1').value;
+  if (!i1){ alert('점검자를 선택해 주세요.'); return; }
+
+  const done = FLAT.map((_,i) => (answers[i] || {}).r).filter(Boolean).length;
+  if (!done){ alert('점검 항목을 하나 이상 체크해 주세요.'); return; }
+
+  const items = {};
+  FLAT.forEach((_, i) => {
+    const a = answers[i];
+    if (a && a.r) items[i] = { r:a.r, photos:(a.photos || []).slice() };
+  });
+
+  const data = {
+    date: curDate(), gonggu: gonggu, slot: slot,
+    ins1: i1, ins2: document.getElementById('fIns2').value || '',
+    etc: document.getElementById('fEtc').value.trim(),
+    items: items, actions: {},
+    at: new Date().toISOString()
+  };
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = '등록 중...';
+  const fin = () => {
+    btn.disabled = false; btn.textContent = '점검 등록하기';
+    answers = {}; buildChecklist();
+    document.getElementById('fEtc').value = '';
+    alert('점검이 등록되었습니다.');
+    render(); go('list');
+  };
+  if (recRef) recRef.push(data).then(fin).catch(() => {
+    btn.disabled = false; btn.textContent = '점검 등록하기';
+    alert('등록에 실패했습니다.');
+  });
+  else { recs['local-'+Date.now()] = data; saveLocal(); fin(); }
+}
+
+/* ---------- 상태 판정 ---------- */
+function xItems(r){
+  return Object.keys(r.items || {}).filter(k => r.items[k].r === 'X');
+}
+function itemStatus(r, k){
+  const a = (r.actions || {})[k] || {};
+  if ((a.photos || []).length) return 'green';
+  if (a.due) return 'orange';
+  return 'red';
+}
+function recStatus(r){
+  const xs = xItems(r);
+  if (!xs.length) return 'none';
+  const st = xs.map(k => itemStatus(r, k));
+  if (st.includes('red')) return 'red';
+  if (st.includes('orange')) return 'orange';
+  return 'green';
+}
+function deadline(r){
+  const t = new Date(r.at).getTime() + ACTION_HOURS*3600*1000;
+  const left = t - Date.now();
+  const p = n => String(n).padStart(2,'0');
+  const dt = new Date(t);
+  return { time: p(dt.getHours())+':'+p(dt.getMinutes()), over: left < 0,
+           left: Math.max(0, Math.round(left/60000)) };
+}
+
+/* ---------- 목록 ---------- */
+function sorted(){
+  const d = curDate();
+  return Object.keys(recs).map(k => ({ key:k, r:recs[k] }))
+    .filter(x => x.r && x.r.date === d)
+    .sort((a,b) => String(a.r.slot).localeCompare(String(b.r.slot)));
+}
+function render(){
+  const list = sorted();
+  let red = 0, green = 0, xtot = 0;
+  list.forEach(({r}) => {
+    xItems(r).forEach(k => {
+      xtot++;
+      const s = itemStatus(r, k);
+      if (s === 'red') red++;
+      if (s === 'green') green++;
+    });
+  });
+  document.getElementById('stTotal').textContent = list.length;
+  document.getElementById('stRed').textContent = red;
+  document.getElementById('stGreen').textContent = green;
+
+  const box = document.getElementById('recList');
+  box.innerHTML = list.length ? list.map(({key, r}) => {
+    const st = recStatus(r);
+    const xs = xItems(r);
+    const dl = deadline(r);
+    const badge = st === 'none'
+      ? '<span class="badge gray">부적합 없음</span>'
+      : st === 'red'
+        ? '<span class="badge red">미조치 ' + xs.filter(k=>itemStatus(r,k)==='red').length + '건</span>'
+        : st === 'orange'
+          ? '<span class="badge orange">조치예정</span>'
+          : '<span class="badge green">조치완료</span>';
+    const okN = Object.keys(r.items||{}).filter(k => r.items[k].r === 'O').length;
+    const naN = Object.keys(r.items||{}).filter(k => r.items[k].r === 'N/A').length;
+    return '<div class="rec ' + (st === 'none' ? '' : st) + '" onclick="openDetail(\''+key+'\')">' +
+      '<div class="rt"><div>' +
+        '<div class="slot">' + esc(r.gonggu) + ' · ' + esc(r.slot) + '</div>' +
+        '<div class="who">점검자 ' + esc(r.ins1) + (r.ins2 ? ', ' + esc(r.ins2) : '') +
+          ' · 등록 ' + fmtTime(r.at) + '</div>' +
+      '</div>' + badge + '</div>' +
+      '<div class="sum">적합 ' + okN + ' · 부적합 ' + xs.length + ' · 해당없음 ' + naN +
+        (xs.length ? ' · 조치기한 ' + dl.time + (dl.over ? ' (초과)' : '') : '') + '</div>' +
+    '</div>';
+  }).join('') : '<div class="empty">이 날짜에 등록된 점검이 없습니다.</div>';
+
+  if (curKey && recs[curKey]) openDetail(curKey, true);
+}
+
+/* ---------- 조치 상세 ---------- */
+function openDetail(key, keepTab){
+  const r = recs[key];
+  if (!r) return;
+  curKey = key;
+  const xs = xItems(r);
+  const dl = deadline(r);
+
+  let h = '<h2>' + esc(r.gonggu) + ' · ' + esc(r.slot) + '</h2>' +
+    '<p class="hint">점검자 ' + esc(r.ins1) + (r.ins2 ? ', ' + esc(r.ins2) : '') +
+    ' · 등록 ' + fmtTime(r.at) + '<br>' +
+    '조치기한 <b>' + dl.time + '</b>' +
+    (xs.length ? (dl.over ? ' <span style="color:var(--red); font-weight:800">기한 초과</span>'
+                          : ' <span style="color:var(--green); font-weight:800">' + dl.left + '분 남음</span>') : '') +
+    '</p>';
+
+  if (!xs.length){
+    h += '<div class="empty">부적합 항목이 없습니다.</div>';
+  } else {
+    h += '<div class="msec">부적합 항목 ' + xs.length + '건 — 조치 등록</div>';
+    xs.forEach(k => {
+      const it = r.items[k], a = (r.actions || {})[k] || {}, st = itemStatus(r, k);
+      const bef = (it.photos || []).map((p,i) =>
+        '<div><img src="'+p+'" onclick="showImg(\''+key+'\',\''+k+'\',\'b\','+i+')"><div class="cap">조치 전</div></div>').join('');
+      const aft = (a.photos || []).map((p,i) =>
+        '<div><img src="'+p+'" onclick="showImg(\''+key+'\',\''+k+'\',\'a\','+i+')"><div class="cap">조치 후</div></div>').join('');
+
+      h += '<div class="act ' + st + '">' +
+        '<div class="aq">' + (Number(k)+1) + '. ' + esc(FLAT[k] ? FLAT[k].q : '') + '</div>' +
+        '<div class="ai">' + esc(FLAT[k] ? FLAT[k].g + ' · ' + FLAT[k].s : '') + '</div>' +
+        (bef || aft ? '<div class="ph">' + bef + aft + '</div>' : '');
+
+      if (st === 'green'){
+        h += '<div class="deadline ok">✅ 조치완료 — ' + esc(a.by || '') +
+             (a.company ? ' (' + esc(a.company) + ')' : '') + ' · ' + fmtTime(a.at) + '</div>';
+      } else {
+        if (st === 'orange')
+          h += '<div class="deadline" style="color:var(--orange)">📅 조치예정일 ' + esc(a.due) +
+               ' — ' + esc(a.by || '') + (a.company ? ' (' + esc(a.company) + ')' : '') + '</div>';
+        h += '<div class="form-card" style="margin-top:10px; padding:13px">' +
+          '<div class="two-col">' +
+            '<div class="field" style="margin-bottom:10px"><label>담당자 이름 *</label>' +
+              '<input type="text" id="an'+k+'" value="'+esc(a.by||'')+'" placeholder="이름"></div>' +
+            '<div class="field" style="margin-bottom:10px"><label>업체명 *</label>' +
+              '<select id="ac'+k+'">' +
+                '<option value="">선택</option>' +
+                COMPANIES.map(c => '<option value="'+c+'"'+(a.company===c?' selected':'')+'>'+c+'</option>').join('') +
+              '</select></div>' +
+          '</div>' +
+          '<div class="field" style="margin-bottom:10px">' +
+            '<button type="button" class="photo-add" onclick="document.getElementById(\'af'+k+'\').click()">' +
+              '📷 조치 후 사진 추가</button>' +
+            '<input type="file" id="af'+k+'" accept="image/*" multiple style="display:none" ' +
+              'onchange="pickAfter(event,\''+key+'\',\''+k+'\')">' +
+          '</div>' +
+          '<div class="field" style="margin-bottom:10px"><label>조치가 어려우면 예정일 선택</label>' +
+            '<input type="date" id="ad'+k+'" value="'+esc(a.due||'')+'" ' +
+            'style="width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; font-family:inherit"></div>' +
+          '<button type="button" class="btn btn-main" style="width:100%" ' +
+            'onclick="saveDue(\''+key+'\',\''+k+'\')">조치예정일 등록</button>' +
+        '</div>';
+      }
+      h += '</div>';
+    });
+  }
+
+  if (r.etc) h += '<div class="msec">기타의견</div><div class="form-card">' +
+    '<div style="font-size:13.5px; line-height:1.7; white-space:pre-wrap">' + esc(r.etc) + '</div></div>';
+
+  document.getElementById('detailBody').innerHTML = h;
+  if (!keepTab) go('detail');
+}
+
+function actorOf(k){
+  const n = (document.getElementById('an'+k) || {}).value || '';
+  const c = (document.getElementById('ac'+k) || {}).value || '';
+  return { by:n.trim(), company:c };
+}
+function pickAfter(e, key, k){
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  const who = actorOf(k);
+  if (!who.by){ alert('담당자 이름을 입력해 주세요.'); return; }
+  if (!who.company){ alert('업체명을 선택해 주세요.'); return; }
+
+  const r = recs[key];
+  if (!r.actions) r.actions = {};
+  const a = r.actions[k] || {};
+  a.by = who.by; a.company = who.company;
+  a.photos = a.photos || [];
+  a.at = new Date().toISOString();
+
+  let left = files.length;
+  files.forEach(f => {
+    if (a.photos.length >= 3){ left--; return; }
+    shrink(f, url => {
+      a.photos.push(url);
+      r.actions[k] = a;
+      if (--left <= 0) commitAction(key, r);
+    });
+  });
+  if (left <= 0) commitAction(key, r);
+}
+function saveDue(key, k){
+  const due = (document.getElementById('ad'+k) || {}).value;
+  if (!due){ alert('조치예정일을 선택해 주세요.'); return; }
+  const who = actorOf(k);
+  if (!who.by){ alert('담당자 이름을 입력해 주세요.'); return; }
+  if (!who.company){ alert('업체명을 선택해 주세요.'); return; }
+
+  const r = recs[key];
+  if (!r.actions) r.actions = {};
+  const a = r.actions[k] || {};
+  a.by = who.by; a.company = who.company; a.due = due;
+  a.at = new Date().toISOString();
+  r.actions[k] = a;
+  commitAction(key, r);
+}
+function commitAction(key, r){
+  if (recRef) recRef.child(key).child('actions').set(r.actions || {})
+    .then(() => { render(); openDetail(key, true); })
+    .catch(() => alert('저장에 실패했습니다.'));
+  else { saveLocal(); render(); openDetail(key, true); }
+}
+
+function showImg(key, k, kind, i){
+  const r = recs[key]; if (!r) return;
+  const src = (kind === 'b') ? (r.items[k].photos || [])[i]
+                             : ((r.actions[k] || {}).photos || [])[i];
+  if (!src) return;
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+/* ---------- 관리 ---------- */
+function tryUnlock(){
+  const v = document.getElementById('pwInput').value.trim();
+  if (v === ADMIN_PW){
+    adminUnlocked = true;
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwErr').classList.remove('on');
+    document.getElementById('adminLock').style.display = 'none';
+    document.getElementById('adminBody').style.display = 'block';
+  } else document.getElementById('pwErr').classList.add('on');
+}
+function lockAdmin(){
+  adminUnlocked = false;
+  document.getElementById('adminLock').style.display = 'block';
+  document.getElementById('adminBody').style.display = 'none';
+}
+function clearDay(){
+  const list = sorted();
+  if (!list.length){ alert('이 날짜에는 점검 기록이 없습니다.'); return; }
+  if (!confirm(curDate() + ' 점검 기록 ' + list.length + '건을 모두 삭제할까요?')) return;
+  if (recRef){
+    Promise.all(list.map(x => recRef.child(x.key).remove()))
+      .catch(() => alert('삭제에 실패했습니다.'));
+  } else {
+    list.forEach(x => delete recs[x.key]);
+    saveLocal(); render();
+  }
+}
+function exportDay(){
+  const list = sorted();
+  if (!list.length){ alert('이 날짜에는 점검 기록이 없습니다.'); return; }
+  let t = '[현장 지정구역 점검] ' + curDate() + '\n더현대광주 신축공사\n\n';
+  list.forEach(({r}) => {
+    const xs = xItems(r);
+    t += '■ ' + r.gonggu + ' ' + r.slot + ' / 점검자 ' + r.ins1 + (r.ins2 ? ', ' + r.ins2 : '') + '\n';
+    if (!xs.length) t += '  부적합 없음\n';
+    xs.forEach(k => {
+      const a = (r.actions || {})[k] || {}, st = itemStatus(r, k);
+      t += '  [' + (st === 'green' ? '조치완료' : st === 'orange' ? '조치예정' : '미조치') + '] ' +
+           (Number(k)+1) + '. ' + (FLAT[k] ? FLAT[k].q : '') + '\n';
+      if (a.by) t += '     담당 ' + a.by + (a.company ? '(' + a.company + ')' : '') +
+                     (a.due ? ' · 예정일 ' + a.due : '') + '\n';
+    });
+    if (r.etc) t += '  기타: ' + r.etc + '\n';
+    t += '\n';
+  });
+  if (navigator.clipboard) navigator.clipboard.writeText(t)
+    .then(() => alert('복사했습니다.')).catch(() => prompt('아래 내용을 복사하세요', t));
+  else prompt('아래 내용을 복사하세요', t);
+}
+
+/* ---------- 저장소 ---------- */
+function loadLocal(){
+  try { recs = JSON.parse(localStorage.getItem('check_recs') || '{}'); } catch(e){ recs = {}; }
+}
+function saveLocal(){
+  try { localStorage.setItem('check_recs', JSON.stringify(recs)); } catch(e){}
+}
+function setSyncLocal(){
+  document.getElementById('adminSync').textContent =
+    '연결되지 않았습니다. 점검 기록이 이 기기에만 저장됩니다.';
+}
+function initFirebase(){
+  const s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
+    s2.onload = () => {
+      try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        recRef = firebase.database().ref('check_records');
+        recRef.on('value', snap => { recs = snap.val() || {}; render(); });
+        const n = document.getElementById('syncNote');
+        n.className = 'sync-note live';
+        n.textContent = '실시간 연동 중입니다. 점검 결과와 조치 내용이 바로 공유됩니다.';
+        document.getElementById('adminSync').textContent =
+          '정상 연결되었습니다. 모든 기기에서 동일하게 보입니다.';
+      } catch(e){ loadLocal(); setSyncLocal(); render(); }
+    };
+    s2.onerror = () => { loadLocal(); setSyncLocal(); render(); };
+    document.head.appendChild(s2);
+  };
+  s1.onerror = () => { loadLocal(); setSyncLocal(); render(); };
+  document.head.appendChild(s1);
+}
+
+/* ---------- 시작 ---------- */
+document.getElementById('theDate').value = todayStr();
+buildSlots();
+fillInspectors();
+buildChecklist();
+initFirebase();
+setInterval(() => { if (Object.keys(recs).length) render(); }, 60000);
+</script>
+</body>
+</html>

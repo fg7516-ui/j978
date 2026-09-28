@@ -244,7 +244,7 @@
     <h2>점검 항목 선택</h2>
     <button type="button" class="mod-card" onclick="enterModule()">
       <span class="ar">›</span>
-      <div class="t">현장 지정구역 점검 체크리스트</div>
+      <div class="t">시간대별 담당구역 현장 점검</div>
       <div class="d">2026.09.29 ~ 2026.12.31</div>
     </button>
     <div class="mod-soon">다른 점검 체크리스트는 준비되는 대로 추가됩니다.</div>
@@ -253,7 +253,7 @@
   <!-- ===== 점검 모듈 ===== -->
   <div id="moduleArea" style="display:none">
     <button type="button" class="back-btn" onclick="backToMenu()">← 체크리스트 선택</button>
-    <h1>현장 지정구역 점검 체크리스트</h1>
+    <h1>시간대별 담당구역 현장 점검</h1>
     <p class="page-sub">2026.09.29 ~ 2026.12.31</p>
 
     <div class="sync-note local" id="syncNote">이 기기에만 저장되는 중입니다.</div>
@@ -935,7 +935,7 @@ function clearDay(){
 function exportDay(){
   const list = sorted();
   if (!list.length){ alert('이 날짜에는 점검 기록이 없습니다.'); return; }
-  let t = '[현장 지정구역 점검] ' + curDate() + '\n더현대광주 신축공사\n\n';
+  let t = '[시간대별 담당구역 현장 점검] ' + curDate() + '\n더현대광주 신축공사\n\n';
   list.forEach(({r}) => {
     const xs = xItems(r);
     t += '■ ' + r.gonggu + ' ' + r.slot + ' / 점검자 ' + r.ins1 + (r.ins2 ? ', ' + r.ins2 : '') + '\n';
